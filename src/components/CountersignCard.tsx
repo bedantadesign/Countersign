@@ -1,0 +1,84 @@
+'use client';
+
+import type { Card, Context } from '@/lib/types';
+import { cardTotalPaise } from '@/lib/cards';
+import { COMPANY } from '@/lib/fixtures';
+import { formatClock, formatINR, maskAccount, plural } from '@/lib/format';
+import { sameAccount } from '@/lib/tiering';
+import { CardShell } from './CardShell';
+import { HoldButton } from './HoldButton';
+import { Icon } from './Icon';
+import { ReversibilityMeter } from './ReversibilityMeter';
+import { WhyDetails } from './WhyDetails';
+
+interface Props {
+  card: Card;
+  index: number;
+  ctx: Context;
+  now: number;
+  onConfirm: () => void;
+}
+
+/** Tier 2: the exact action, the amount, the undo window, and a deliberate press-and-hold. */
+export function CountersignCard({ card, index, ctx, now, onConfirm }: Props) {
+  const isIrn = card.kind === 'generate_irn';
+  const n = card.items.length;
+  const first = card.items[0]!;
+  const cutoff = first.reversibility.kind === 'windowed' ? first.reversibility.expiresAt : undefined;
+
+  const title = isIrn ? `Generate ${plural(n, 'e-invoice IRN')}` : `Pay ${plural(n, 'vendor')}`;
+  const holdLabel = isIrn ? `Hold to generate ${n} IRNs` : `Hold to pay ${formatINR(cardTotalPaise(card))}`;
+
+  return (
+    <CardShell
+      id={card.id}
+      tier={2}
+      index={index}
+      title={title}
+      total={formatINR(cardTotalPaise(card))}
+      why={first.why}
+    >
+      <ul className="lines">
+        {card.items.map(({ action }) => {
+          const vendor = action.counterparty ? ctx.vendors[action.counterparty.id] : undefined;
+          const onFile = vendor && action.bank ? sameAccount(action.bank, vendor.bank) : false;
+          return (
+            <li className="line" key={action.id}>
+              <span className="line__name">{action.counterparty?.name}</span>
+              <span className="line__amount">{formatINR(action.amountPaise ?? 0)}</span>
+              <span className="line__sub">
+                {isIrn
+                  ? `${action.refId} · ${action.counterparty?.gstin}`
+                  : `Invoice ${action.refId} · to ${action.bank ? maskAccount(action.bank.accountNumber) : ''}`}
+              </span>
+              {!isIrn && onFile ? (
+                <span className="line__flag on-file">
+                  <Icon name="check" size={12} /> Account on file
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="note">
+        <span className="note__label">When you confirm</span>
+        <p>
+          {isIrn
+            ? 'Each invoice is registered on the IRP now and gets an IRN and a signed QR code. After the window closes, an IRN is permanent.'
+            : `Payments are queued from ${COMPANY.paysFrom} for the next bank batch${cutoff ? ` at ${formatClock(cutoff)}` : ''}. Once the batch is released, a transfer can’t be recalled.`}
+        </p>
+      </div>
+
+      <ReversibilityMeter
+        reversibility={first.reversibility}
+        now={now}
+        startedAt={isIrn ? undefined : ctx.now}
+        until={isIrn ? undefined : cutoff}
+      />
+
+      <HoldButton label={holdLabel} onConfirm={onConfirm} />
+      <WhyDetails decisions={card.items} />
+    </CardShell>
+  );
+}

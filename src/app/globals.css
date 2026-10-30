@@ -172,12 +172,12 @@ button {
   border-color: #fff;
 }
 .btn--tier {
-  background: color-mix(in oklab, var(--tier) 88%, #fff 0%);
+  background: var(--tier);
   border-color: var(--tier);
   color: #0a1020;
 }
 .btn--tier:hover {
-  background: color-mix(in oklab, var(--tier) 80%, #fff);
+  background: color-mix(in oklab, var(--tier) 82%, #fff);
   border-color: var(--tier);
 }
 .btn--quiet {

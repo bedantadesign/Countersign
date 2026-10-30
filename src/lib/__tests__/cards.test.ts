@@ -98,6 +98,33 @@ describe('reducer', () => {
     // placed ahead of the other open cards
     expect(openCards(s)[0]!.id).toBe(newCard.id);
   });
+
+  it('offers no reroute for holds that paying the account on file cannot fix', () => {
+    const v = ctx.vendors['v-sundaram']!;
+    const base = {
+      id: 'held',
+      kind: 'pay_vendor' as const,
+      title: 'Pay Sundaram',
+      counterparty: { id: v.id, name: v.name },
+      bank: v.bank,
+      provenance: { origin: 'user' as const },
+    };
+    const outlier = decide({ ...base, amountPaise: v.averagePaymentPaise * 4 }, ctx);
+    const vendors = { ...ctx.vendors, [v.id]: { ...v, bankChangedAt: '2026-10-20' } };
+    const recentChange = decide({ ...base, amountPaise: 24_000_000 }, { ...ctx, vendors });
+
+    expect(outlier.tier).toBe(3);
+    expect(recentChange.tier).toBe(3);
+    expect(rerouteToAccountOnFile(buildCards([outlier])[0]!, ctx)).toBeNull();
+    expect(rerouteToAccountOnFile(buildCards([recentChange])[0]!, { ...ctx, vendors })).toBeNull();
+  });
+
+  it('refuses a reroute that would land on another Tier 3 card', () => {
+    const held = cards[0]!;
+    const stillHeld = { ...held, id: 'other' };
+    const s = reducer(ready(), { type: 'reroute', cardId: held.id, at: NOW, newCard: stillHeld });
+    expect(s.resolutions[held.id]).toBeUndefined();
+  });
 });
 
 describe('format', () => {

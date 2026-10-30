@@ -154,7 +154,13 @@ export interface Scenario {
 }
 
 export function buildScenario(now: number): Scenario {
-  const ctx: Context = { now, vendors: VENDORS, documents: documents(), paymentCutoffAt: nextPaymentCutoff(now) };
+  const ctx: Context = {
+    now,
+    request: TASK,
+    vendors: VENDORS,
+    documents: documents(),
+    paymentCutoffAt: nextPaymentCutoff(now),
+  };
   const user = { origin: 'user' as const, quote: TASK };
   const plan: ProposedAction[] = [];
 
@@ -221,7 +227,10 @@ export function buildScenario(now: number): Scenario {
       amountPaise: 24_000_000,
       refId: 'SP/2610/771',
       bank: VENDORS['v-sundaram']!.bank,
-      provenance: user,
+      provenance: {
+        ...user,
+        evidence: [{ documentId: 'doc-sundaram-771', quote: 'Invoice no. SP/2610/771 · 18 Oct 2026 · Due 02 Nov 2026' }],
+      },
     },
     {
       id: 'a-pay-kaveri',
@@ -231,7 +240,10 @@ export function buildScenario(now: number): Scenario {
       amountPaise: 6_850_000,
       refId: 'KL/1026/318',
       bank: VENDORS['v-kaveri']!.bank,
-      provenance: user,
+      provenance: {
+        ...user,
+        evidence: [{ documentId: 'doc-kaveri-318', quote: 'Invoice no. KL/1026/318 · 20 Oct 2026 · Due 04 Nov 2026' }],
+      },
     },
   );
 

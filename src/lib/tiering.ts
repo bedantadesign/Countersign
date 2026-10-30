@@ -11,7 +11,7 @@ import type {
   Tier,
   Vendor,
 } from './types';
-import { documentText } from './documents';
+import { documentText, hiddenText, normalise } from './documents';
 import { formatDate, formatINR, maskAccount } from './format';
 
 const HOUR = 60 * 60 * 1000;
@@ -180,12 +180,16 @@ export function baseTier(blast: Blast, reversibility: Reversibility['kind']): Ti
   return blast === 'external' ? 1 : 0;
 }
 
-const normalise = (s: string) => s.replace(/[^a-z0-9]/gi, '').toLowerCase();
+/** Shorter quotes match too much ordinary text to say anything about who asked. */
+export const MIN_QUOTE_CHARS = 16;
 
 /**
- * Works out where an action really came from. The planner's declaration is only a claim:
- * a quote found in a document, or a destination account that appears in a document
- * but not in the vendor master, marks the action as document-originated regardless.
+ * Works out who really asked for an action. The planner's declaration is only a claim.
+ *
+ * Instruction words that are not the person's own but do appear in a document mean the
+ * document asked. Evidence is data (an invoice total, a due date) and never says who asked,
+ * unless it was taken from text a person cannot see. A destination account that appears in
+ * a document but not in the vendor master also marks the action as document-originated.
  */
 export function effectiveProvenance(action: ProposedAction, ctx: Context): EffectiveProvenance {
   const declared = action.provenance;
@@ -195,8 +199,17 @@ export function effectiveProvenance(action: ProposedAction, ctx: Context): Effec
 
   if (declared.quote) {
     const q = normalise(declared.quote);
-    const hit = ctx.documents.find((d) => normalise(documentText(d)).includes(q));
-    if (hit) return { origin: 'document', documentId: hit.id, quote: declared.quote, basis: 'quote-in-document' };
+    if (q.length >= MIN_QUOTE_CHARS && !normalise(ctx.request).includes(q)) {
+      const hit = ctx.documents.find((d) => normalise(documentText(d)).includes(q));
+      if (hit) return { origin: 'document', documentId: hit.id, quote: declared.quote, basis: 'quote-in-document' };
+    }
+  }
+
+  for (const e of declared.evidence ?? []) {
+    const q = normalise(e.quote);
+    if (q.length < MIN_QUOTE_CHARS) continue;
+    const hit = ctx.documents.find((d) => normalise(hiddenText(d)).includes(q));
+    if (hit) return { origin: 'document', documentId: hit.id, quote: e.quote, basis: 'hidden-evidence' };
   }
 
   const vendor = action.counterparty ? ctx.vendors[action.counterparty.id] : undefined;

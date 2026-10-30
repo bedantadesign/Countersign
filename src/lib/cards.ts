@@ -42,6 +42,8 @@ export function loggedDecisions(decisions: Decision[]): Decision[] {
 /**
  * The safe path from a held payment: pay the account on file, as a normal sign-off.
  * The new action comes from the person's own choice, not from the document.
+ * Returns null when paying the account on file would still be held, so the path is never offered
+ * for holds it cannot fix (a recent bank change, an unusual amount).
  */
 export function rerouteToAccountOnFile(card: Card, ctx: Context): Card | null {
   const pay = card.items.find((d) => d.action.kind === 'pay_vendor');
@@ -56,5 +58,6 @@ export function rerouteToAccountOnFile(card: Card, ctx: Context): Card | null {
     provenance: { origin: 'user', quote: 'You chose to pay the account on file' },
   };
   const decision = decide(action, ctx);
-  return { id: `${decision.tier}:${action.kind}:on-file:${vendor.id}`, tier: decision.tier as 1 | 2 | 3, kind: action.kind, items: [decision] };
+  if (decision.tier === 0 || decision.tier === 3) return null;
+  return { id: `${decision.tier}:${action.kind}:on-file:${vendor.id}`, tier: decision.tier, kind: action.kind, items: [decision] };
 }

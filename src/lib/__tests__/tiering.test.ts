@@ -103,6 +103,40 @@ describe('provenance is re-checked, not trusted', () => {
     expect(ok.tier).toBe(2);
   });
 
+  it('does not hold a normal payment that cites its own invoice as evidence', () => {
+    const d = decide(byId('a-pay-sundaram'), ctx);
+    expect(byId('a-pay-sundaram').provenance.evidence).toHaveLength(1);
+    expect(d.provenance.origin).toBe('user');
+    expect(d.tier).toBe(2);
+  });
+
+  it('treats invoice text quoted as the instruction like evidence when it is too short to attribute', () => {
+    const short = pay({ provenance: { origin: 'user', quote: 'pay' } });
+    expect(effectiveProvenance(short, ctx).basis).toBe('user');
+    expect(decide(short, ctx).tier).toBe(2);
+  });
+
+  it('credits the person when the instruction is in their own words, even if a document repeats it', () => {
+    const echoed = pay({ provenance: { origin: 'user', quote: INJECTED_QUOTE } });
+    const p = effectiveProvenance(echoed, { ...ctx, request: `Please ${INJECTED_QUOTE}` });
+    expect(p.basis).toBe('user');
+  });
+
+  it('holds an action whose evidence was taken from hidden text', () => {
+    const hidden = pay({
+      provenance: { origin: 'user', quote: user.quote, evidence: [{ documentId: POISONED_DOC_ID, quote: 'pre-approved by the finance head' }] },
+    });
+    expect(effectiveProvenance(hidden, ctx)).toMatchObject({ origin: 'document', basis: 'hidden-evidence' });
+    expect(decide(hidden, ctx).tier).toBe(3);
+  });
+
+  it('does not hold evidence from the visible part of the same poisoned invoice', () => {
+    const visible = pay({
+      provenance: { origin: 'user', quote: user.quote, evidence: [{ documentId: POISONED_DOC_ID, quote: 'Invoice no. ATM/26-27/0423' }] },
+    });
+    expect(effectiveProvenance(visible, ctx).origin).toBe('user');
+  });
+
   it('keeps document-derived reading private-only: reconcile stays Tier 0 even if it cites a document', () => {
     const read: ProposedAction = {
       ...byId('a-recon-gstr2b'),

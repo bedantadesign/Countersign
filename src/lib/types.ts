@@ -42,11 +42,18 @@ export interface SourceDocument {
   blocks: DocBlock[];
 }
 
+export interface Evidence {
+  documentId: string;
+  quote: string;
+}
+
 export interface Provenance {
   origin: 'user' | 'document';
   documentId?: string;
-  /** The words the action was derived from. */
+  /** The words that asked for this action: who gave the instruction. */
   quote?: string;
+  /** Data the action uses, such as an invoice total. Data never changes who asked. */
+  evidence?: Evidence[];
 }
 
 export interface Counterparty {
@@ -83,6 +90,8 @@ export type Reversibility =
 
 export interface Context {
   now: number;
+  /** The person's own words. The only instruction source that is not a document. */
+  request: string;
   vendors: Record<string, Vendor>;
   documents: SourceDocument[];
   /** When the next bank payment batch is released. */
@@ -101,7 +110,7 @@ export interface EffectiveProvenance {
   documentId?: string;
   quote?: string;
   /** How the engine reached this, which may differ from what the planner declared. */
-  basis: 'user' | 'declared' | 'quote-in-document' | 'tainted-parameter';
+  basis: 'user' | 'declared' | 'quote-in-document' | 'hidden-evidence' | 'tainted-parameter';
 }
 
 export interface Decision {

@@ -32,21 +32,26 @@ The model proposes actions. It does **not** pick the tier. A fixed rules layer i
 
 ### Provenance is re-checked, not trusted
 
-The planner declares where each action came from, but that is only a claim. The engine upgrades an action to document-originated when:
+The planner says where each action came from, but that is only a claim. It reports two things separately:
 
-- its quoted source text is found inside a document, or
-- its destination account appears in a document but is **not** the account on file in the vendor master.
+- **Instruction:** the words that asked for the action. If they are the person's own words, the person asked. If they are not, but they appear in a document, the document asked. Quotes shorter than 16 letters and digits are too generic to attribute and are ignored.
+- **Evidence:** data the action uses, such as an invoice number or total. Evidence never changes who asked, so a normal payment can cite its own invoice. The exception is evidence taken from hidden text, which no person could have seen, so the action is treated as document-originated.
 
-A legitimate invoice prints the vendor's real bank details, so an account that matches the master is never treated as tainted. Both cases are covered by tests, including one where the planner lies and says the instruction came from the user.
+Separately, a destination account that appears in a document but is **not** the account on file in the vendor master marks the action as document-originated. A legitimate invoice prints the vendor's real bank details, so an account that matches the master is never treated as tainted. All of these cases are covered by tests, including one where the planner lies and says the instruction came from the user.
 
 R6 is a second, independent catch. Even if provenance were somehow missed, paying an account that isn't on file is held on its own.
+
+### Tier 3 says why, and offers only paths that resolve it
+
+When a document gave the instruction, the card shows the person's own request beside the document text, with the hidden line highlighted. When the hold is about the payment itself (a recent bank change, an unusual amount), it says so without blaming a document. "Pay the account on file instead" appears only when doing that would actually lower the tier.
 
 ## Run it
 
 ```bash
 npm install
 npm run dev      # http://localhost:3000
-npm test         # 35 unit tests: tiering, provenance, bundling, reducer, formatting
+npm test         # unit tests: tiering, provenance, bundling, reducer, formatting, Tier 3 card rendering
+npm run test:e2e # browser tests: builds, serves on :3100, drives the real flow in Chromium
 npm run typecheck
 ```
 
@@ -80,4 +85,5 @@ src/lib/        types, fixtures, tiering engine, card bundling, reducer, formatt
 src/lib/__tests__/
 src/components/ cards, hold button, reversibility meter, brief, feed
 src/app/        layout, page, styles
+e2e/            Playwright browser tests
 ```

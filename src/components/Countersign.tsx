@@ -44,7 +44,7 @@ export function Countersign() {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [step, setStep] = useState(0);
   const timers = useRef<number[]>([]);
-  const now = useNow(state.phase === 'ready');
+  const tick = useNow(state.phase === 'ready');
 
   const clearTimers = useCallback(() => {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -78,9 +78,11 @@ export function Countersign() {
     window.scrollTo({ top: 0 });
   }, [clearTimers]);
 
-  // Focus: the brief when the plan lands, the next open card when one is handled (not on undo).
+  // Focus: the brief when the plan lands, the next open card when one is handled,
+  // and the restored card on undo (its undo button is gone, so focus would fall to the page).
   const handledCount = Object.keys(state.resolutions).length;
   const prevHandled = useRef(0);
+  const restoreFocus = useRef<string | null>(null);
   useEffect(() => {
     if (state.phase === 'ready' && handledCount === 0 && prevHandled.current === 0) focusTarget('brief');
   }, [state.phase, handledCount]);
@@ -88,15 +90,20 @@ export function Countersign() {
     if (handledCount > prevHandled.current) {
       const next = openCards(state)[0];
       focusTarget(next ? next.id : 'brief');
+    } else if (handledCount < prevHandled.current && restoreFocus.current) {
+      focusTarget(restoreFocus.current);
     }
+    restoreFocus.current = null;
     prevHandled.current = handledCount;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handledCount]);
+  }, [handledCount, state]);
 
   const open = useMemo(() => openCards(state), [state]);
   const handled = useMemo(() => handledCards(state), [state]);
   const logged = useMemo(() => loggedDecisions(state.decisions), [state.decisions]);
   const ctx = scenario?.ctx;
+  // The clock starts on the first tick after the plan lands. Until then, and after a replay
+  // leaves a stale tick behind, the scenario's own start time is the honest floor.
+  const now = Math.max(tick, ctx?.now ?? 0);
 
   return (
     <main className="shell">
@@ -221,7 +228,10 @@ export function Countersign() {
                     resolution={state.resolutions[card.id]!}
                     ctx={ctx}
                     now={now}
-                    onUndo={() => dispatch({ type: 'undo', cardId: card.id })}
+                    onUndo={() => {
+                      restoreFocus.current = card.id;
+                      dispatch({ type: 'undo', cardId: card.id });
+                    }}
                   />
                 ))}
               </ul>

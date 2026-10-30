@@ -52,6 +52,8 @@ export function summarise(card: Card, res: Resolution, ctx: Context): Summary {
         detail: 'The new account was discarded. A normal countersign is waiting for the payment.',
       };
     case 'rejected':
-      return { title: 'Rejected and flagged', detail: 'Nothing was changed. The source document is flagged for review.' };
+      return card.items.some((d) => d.provenance.origin === 'document')
+        ? { title: 'Rejected and flagged', detail: 'Nothing was changed. The source document is flagged for review.' }
+        : { title: 'Rejected', detail: 'Nothing was changed.' };
   }
 }

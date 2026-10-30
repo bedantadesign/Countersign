@@ -76,7 +76,7 @@ export function reducer(state: State, event: Event): State {
 
     case 'reroute': {
       const card = state.cards.find((c) => c.id === event.cardId);
-      if (!card || card.tier !== 3 || state.resolutions[card.id]) return state;
+      if (!card || card.tier !== 3 || event.newCard.tier === 3 || state.resolutions[card.id]) return state;
       const cards = [...state.cards];
       // Slot the safe payment in where a person will meet it: after the held cards, before the rest.
       const firstOpen = cards.findIndex((c) => c.tier < 3);

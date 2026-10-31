@@ -49,7 +49,7 @@ When a document gave the instruction, the card shows the person's own request be
 
 With an API key on the server, Claude plans the month-end from the same books and documents each run. Without one, the demo uses the recorded plan and says so.
 
-- **One call, no tools.** `src/lib/planner/live.ts` makes a single structured-output request to `claude-opus-5-5` at medium effort, with server-side refusal fallback (`fallbacks: "default"`). The planner can only propose. It cannot execute anything.
+- **One call, no tools.** `src/lib/planner/live.ts` makes a single structured-output request to `claude-haiku-5-5` at medium effort. Haiku has no server-side refusal fallback, so a refusal fails closed like any other planning failure. If `COUNTERSIGN_MODEL` names Opus, Sonnet or Fable, the request adds `fallbacks: "default"`. The planner can only propose. It cannot execute anything.
 - **The planner reports who asked.** Each proposed action carries an instruction quote and separate evidence quotes, which the engine re-checks as described above. The planner is told to surface instructions it finds in documents as proposals, not to follow or drop them quietly.
 - **The gate doesn't depend on the planner being honest.** Tests run three planners through the same rules: one that surfaces the injection, one that is fooled and claims the person asked, and one that ignores the hidden line. The first two land on Tier 3; the third pays the account on file.
 - **Record fields come from the books.** Customer names, GSTINs, invoice totals and reminder emails are looked up, not taken from the model. A proposal that names a record the books don't have is dropped and listed in the log.

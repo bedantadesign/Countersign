@@ -50,7 +50,7 @@ Built: the engine, all four tiers, hold-to-confirm, live undo meters, the Tier 3
 
 1. Mobile polish pass at 390px width: screenshot each card, fix only what's broken.
 2. Stale bank cutoff: if the tab stays open past the cutoff, the payment card still names a batch time that has passed, and approving records an undo deadline in the past. Roll to the next batch.
-3. Run live planning once with a real key (`ANTHROPIC_API_KEY=... npm run dev`) and tune the prompt in `src/lib/planner/prompt.ts`.
+3. Run live planning once with a real key (`ANTHROPIC_API_KEY=... npm run dev`) and tune the prompt in `src/lib/planner/prompt.ts`. The planner runs on `claude-haiku-5-5`, which has no server-side refusal fallback; check the injected invoice does not trip a refusal.
 4. Deploy (the owner does this on Vercel). Use `COUNTERSIGN_LIVE=off`, or a key with a spend limit: anyone who opens the page can trigger a billed call.
 5. MCP App wrapper, timeboxed to 3 hours: the official `ext-apps` SDK, 500px inline height, host CSS variables.
 6. The owner records the video and writes the case study.

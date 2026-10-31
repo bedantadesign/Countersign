@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
-import { PlannerError, liveAvailable, requestPlan } from '../live';
+import { PlannerError, liveAvailable, requestPlan, serverFallback } from '../live';
 import { planFailure } from '../errors';
 import { PLANNER_SYSTEM, plannerInput } from '../prompt';
 import { PlanSchema } from '../schema';
@@ -11,26 +11,26 @@ import { surfacedPlan } from '../../../test/plans';
 const { ctx } = buildScenario(Date.parse('2026-10-30T12:00:00Z'));
 
 function fakeClient(response: Record<string, unknown>) {
-  const parse = vi.fn().mockResolvedValue({ model: 'claude-opus-5-5', ...response });
+  const parse = vi.fn().mockResolvedValue({ model: 'claude-haiku-5-5', ...response });
   return { client: { beta: { messages: { parse } } } as unknown as Anthropic, parse };
 }
 
 describe('requestPlan', () => {
-  it('makes one structured-output call with server-side fallback, no tools, and the fixed inputs', async () => {
+  it('makes one structured-output call on Haiku, with no fallback, no tools, and the fixed inputs', async () => {
     const plan = surfacedPlan();
     const { client, parse } = fakeClient({ stop_reason: 'end_turn', parsed_output: plan });
     const result = await requestPlan(client, TASK, ctx.documents);
 
-    expect(result).toEqual({ plan, model: 'claude-opus-5-5' });
+    expect(result).toEqual({ plan, model: 'claude-haiku-5-5' });
     const params = parse.mock.calls[0]![0];
     expect(params).toMatchObject({
-      model: 'claude-opus-5-5',
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
+      model: 'claude-haiku-5-5',
       output_config: { effort: 'medium' },
       system: PLANNER_SYSTEM,
     });
     expect(params.output_config.format).toBeDefined();
+    expect(params.fallbacks).toBeUndefined();
+    expect(params.betas).toBeUndefined();
     expect(params.tools).toBeUndefined();
     expect(params.thinking).toBeUndefined();
     expect(params.messages).toEqual([{ role: 'user', content: plannerInput(TASK, ctx.documents) }]);
@@ -43,6 +43,14 @@ describe('requestPlan', () => {
   ])('fails closed on %s', async (_, response, reason) => {
     const { client } = fakeClient(response);
     await expect(requestPlan(client, TASK, ctx.documents)).rejects.toMatchObject({ reason });
+  });
+
+  it('asks for server-side fallback only on models that have one', () => {
+    expect(serverFallback('claude-haiku-5-5')).toEqual({});
+    expect(serverFallback('claude-opus-5-5')).toEqual({
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+    });
   });
 
   it('builds an output format from the schema', () => {

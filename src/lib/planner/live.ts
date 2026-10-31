@@ -5,7 +5,13 @@ import { PlanSchema, type Plan } from './schema';
 import { PLANNER_SYSTEM, plannerInput } from './prompt';
 import type { SourceDocument } from '../types';
 
-export const PLANNER_MODEL = process.env.COUNTERSIGN_MODEL || 'claude-opus-5-5';
+export const PLANNER_MODEL = process.env.COUNTERSIGN_MODEL || 'claude-haiku-5-5';
+
+/** Haiku has no server-side refusal fallback, so a refusal there just fails closed. */
+export function serverFallback(model: string) {
+  if (model.startsWith('claude-haiku')) return {};
+  return { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const };
+}
 
 export type PlannerFailure = 'refused' | 'truncated' | 'unparseable';
 
@@ -24,7 +30,7 @@ export function liveAvailable(env: NodeJS.ProcessEnv = process.env): boolean {
 
 /**
  * One structured-output call. No tools and no loop: the planner only proposes.
- * A refusal falls back server-side; anything still unusable is an error, never a guess.
+ * A refusal falls back server-side where the model has one; anything still unusable is an error, never a guess.
  */
 export async function requestPlan(
   client: Anthropic,
@@ -34,8 +40,7 @@ export async function requestPlan(
   const response = await client.beta.messages.parse({
     model: PLANNER_MODEL,
     max_tokens: 16000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
+    ...serverFallback(PLANNER_MODEL),
     output_config: { effort: 'medium', format: betaZodOutputFormat(PlanSchema) },
     system: PLANNER_SYSTEM,
     messages: [{ role: 'user', content: plannerInput(request, documents) }],

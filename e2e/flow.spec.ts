@@ -153,7 +153,7 @@ test('plans live with Claude: the same rules hold the surfaced injection', async
   const plan = surfacedPlan();
   const { actions, dropped } = toProposedActions(plan, buildScenario(Date.now()).ctx.documents);
   await enableLive(page, (route) =>
-    route.fulfill({ json: { actions, dropped, notes: plan.notes, model: 'claude-opus-5-5' } }),
+    route.fulfill({ json: { actions, dropped, notes: plan.notes, model: 'claude-haiku-5-5' } }),
   );
 
   await page.goto('/');

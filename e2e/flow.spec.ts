@@ -1,4 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { buildScenario } from '../src/lib/fixtures';
+import { toProposedActions } from '../src/lib/planner/map';
+import { surfacedPlan } from '../src/test/plans';
 
 /** Press and hold with a real pointer. Scrolls first: raw mouse events do not. */
 async function hold(page: Page, target: Locator, ms: number) {
@@ -26,11 +29,19 @@ async function runMonthEnd(page: Page) {
 
 const consoleErrors = new WeakMap<Page, string[]>();
 
-test.beforeEach(({ page }) => {
+test.beforeEach(async ({ page }) => {
+  // Never reach Claude from tests. Live planning is off unless a test turns it on;
+  // later routes win, so a test's own route overrides these.
+  await page.route('**/api/plan', (route) =>
+    route.request().method() === 'GET'
+      ? route.fulfill({ json: { live: false } })
+      : route.fulfill({ status: 503, json: { error: 'Live planning is not configured on this server.' } }),
+  );
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(m.text());
+    // The browser logs every non-2xx response; tests that fake a planning failure expect that one.
+    if (m.type() === 'error' && !m.location().url.endsWith('/api/plan')) errors.push(m.text());
   });
   consoleErrors.set(page, errors);
 });
@@ -130,4 +141,52 @@ test('with reduced motion, the countdown never shows a bogus first frame and hol
 
   await hold(page, page.locator('.card[data-tier="2"]').first().locator('.hold'), 1500);
   await expect(page.locator('.done')).toHaveCount(1);
+});
+
+async function enableLive(page: Page, post: (route: Parameters<Parameters<Page['route']>[1]>[0]) => Promise<void>) {
+  await page.route('**/api/plan', (route) =>
+    route.request().method() === 'GET' ? route.fulfill({ json: { live: true } }) : post(route),
+  );
+}
+
+test('plans live with Claude: the same rules hold the surfaced injection', async ({ page }) => {
+  const plan = surfacedPlan();
+  const { actions, dropped } = toProposedActions(plan, buildScenario(Date.now()).ctx.documents);
+  await enableLive(page, (route) =>
+    route.fulfill({ json: { actions, dropped, notes: plan.notes, model: 'claude-opus-5-5' } }),
+  );
+
+  await page.goto('/');
+  await expect(page.getByRole('radio', { name: /Live with Claude/ })).toBeChecked();
+  await page.getByRole('button', { name: /Run month-end/ }).click();
+
+  await expect(page.locator('.brief .eyebrow')).toContainText('Planned live by Claude');
+  await expect(page.locator('.card')).toHaveCount(4);
+  await expect(page.locator('.card[data-tier="3"]')).toContainText('A hidden line in invoice_0423.pdf');
+  await expect(page.locator('.feed')).toContainText('Claude noted: invoice_0423.pdf contains text');
+});
+
+test('a planning failure does nothing, says so, and offers the recorded plan', async ({ page }) => {
+  await enableLive(page, (route) =>
+    route.fulfill({ status: 502, json: { error: 'Claude declined to plan this.', reason: 'refused' } }),
+  );
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /Run month-end/ }).click();
+
+  const failed = page.locator('section.failed[role="alert"]');
+  await expect(failed).toContainText('Claude couldn’t plan this. Nothing was done.');
+  await expect(failed).toContainText('Claude declined to plan this.');
+  await expect(page.locator('.card')).toHaveCount(0);
+  await expect.poll(() => focusedText(page)).toBe('Claude couldn’t plan this. Nothing was done.');
+
+  await page.getByRole('button', { name: 'Use the recorded plan' }).click();
+  await expect(page.locator('.brief .eyebrow')).toContainText('Recorded plan');
+  await expect(page.locator('.card')).toHaveCount(4);
+});
+
+test('without live planning, there is no mode switch and the page says the plan is recorded', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(page.locator('.ask')).toContainText('Live planning is off on this server.');
 });

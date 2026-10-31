@@ -15,7 +15,9 @@ export type Resolution =
   | { kind: 'rejected'; at: number };
 
 export interface State {
-  phase: 'idle' | 'planning' | 'ready';
+  phase: 'idle' | 'planning' | 'ready' | 'failed';
+  /** Why planning failed. Nothing was done when this is set. */
+  error?: string;
   decisions: Decision[];
   cards: Card[];
   resolutions: Record<string, Resolution>;
@@ -26,6 +28,7 @@ export const initialState: State = { phase: 'idle', decisions: [], cards: [], re
 export type Event =
   | { type: 'planning' }
   | { type: 'ready'; decisions: Decision[] }
+  | { type: 'failed'; message: string }
   | { type: 'approve'; cardId: string; at: number; approvedIds?: string[] }
   | { type: 'undo'; cardId: string }
   | { type: 'verify'; cardId: string; at: number }
@@ -48,6 +51,10 @@ export function reducer(state: State, event: Event): State {
 
     case 'ready':
       return { phase: 'ready', decisions: event.decisions, cards: buildCards(event.decisions), resolutions: {} };
+
+    case 'failed':
+      if (state.phase !== 'planning') return state;
+      return { ...initialState, phase: 'failed', error: event.message };
 
     case 'approve': {
       const card = state.cards.find((c) => c.id === event.cardId);

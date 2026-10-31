@@ -259,6 +259,65 @@ button {
   }
 }
 
+/* Planning mode */
+
+.mode {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .mode {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.mode__option {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.mode__option:has(input:checked) {
+  border-color: var(--text-2);
+  background: var(--surface-2);
+}
+.mode__option input {
+  margin: 4px 0 0;
+  accent-color: var(--text);
+}
+.mode__name {
+  display: block;
+  font-weight: 600;
+}
+.mode__hint {
+  display: block;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+/* Planning failed */
+
+.failed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in oklab, var(--t3) 60%, var(--line));
+  border-radius: var(--radius);
+  background: color-mix(in oklab, var(--t3) 5%, var(--surface));
+}
+.failed__title {
+  font-size: 20px;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  font-weight: 650;
+}
+
 /* ---------- Tier theming ---------- */
 
 [data-tier='0'] { --tier: var(--t0); }

@@ -79,6 +79,16 @@ describe('reducer', () => {
     expect(s.resolutions[held.id]).toBeUndefined();
   });
 
+  it('records why planning failed, only while planning', () => {
+    const planning = reducer(initialState, { type: 'planning' });
+    expect(reducer(planning, { type: 'failed', message: 'Claude declined to plan this.' })).toMatchObject({
+      phase: 'failed',
+      error: 'Claude declined to plan this.',
+      cards: [],
+    });
+    expect(reducer(ready(), { type: 'failed', message: 'late' }).phase).toBe('ready');
+  });
+
   it('undo returns a card to the open list', () => {
     let s = reducer(ready(), { type: 'approve', cardId: '2:generate_irn', at: NOW });
     s = reducer(s, { type: 'undo', cardId: '2:generate_irn' });

@@ -5,6 +5,8 @@ import { buildScenario, COMPANY, PLANNING_STEPS, TASK, type Scenario } from '@/l
 import { decide } from '@/lib/tiering';
 import { loggedDecisions, rerouteToAccountOnFile } from '@/lib/cards';
 import { handledCards, initialState, openCards, reducer } from '@/lib/reducer';
+import { fetchLiveAvailable, fetchLivePlan } from '@/lib/planner/client';
+import type { Dropped } from '@/lib/planner/map';
 import { BatchCard } from './BatchCard';
 import { Brief } from './Brief';
 import { CountersignCard } from './CountersignCard';
@@ -33,6 +35,22 @@ function useNow(active: boolean) {
   return now;
 }
 
+/** Narrates fixed inputs truthfully; the last step waits for Claude's answer. */
+const LIVE_STEPS = [
+  'Reading 3 vendor invoices',
+  'Reading the vendor master and open receivables',
+  'Sending it all to Claude',
+  'Waiting for Claude’s plan',
+];
+
+type Mode = 'live' | 'recorded';
+
+interface PlanMeta {
+  source: Mode;
+  notes: string[];
+  dropped: Dropped[];
+}
+
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function focusTarget(id: string) {
@@ -43,33 +61,74 @@ export function Countersign() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [step, setStep] = useState(0);
+  const [liveAvailable, setLiveAvailable] = useState(false);
+  const [mode, setMode] = useState<Mode>('recorded');
+  const [meta, setMeta] = useState<PlanMeta>({ source: 'recorded', notes: [], dropped: [] });
   const timers = useRef<number[]>([]);
+  const inflight = useRef<AbortController | null>(null);
   const tick = useNow(state.phase === 'ready');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLiveAvailable().then((live) => {
+      if (cancelled) return;
+      setLiveAvailable(live);
+      if (live) setMode('live');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach((t) => window.clearTimeout(t));
     timers.current = [];
+    inflight.current?.abort();
+    inflight.current = null;
   }, []);
   useEffect(() => clearTimers, [clearTimers]);
 
-  const run = useCallback(() => {
-    clearTimers();
-    const sc = buildScenario(Date.now());
-    setScenario(sc);
-    setStep(0);
-    dispatch({ type: 'planning' });
+  const run = useCallback(
+    (how: Mode) => {
+      clearTimers();
+      const sc = buildScenario(Date.now());
+      setScenario(sc);
+      setStep(0);
+      dispatch({ type: 'planning' });
+      const gap = prefersReducedMotion() ? 0 : 420;
+      const later = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
 
-    const gap = prefersReducedMotion() ? 0 : 420;
-    PLANNING_STEPS.forEach((_, i) => {
-      timers.current.push(window.setTimeout(() => setStep(i + 1), gap * (i + 1)));
-    });
-    timers.current.push(
-      window.setTimeout(
-        () => dispatch({ type: 'ready', decisions: sc.plan.map((a) => decide(a, sc.ctx)) }),
-        gap * (PLANNING_STEPS.length + 1),
-      ),
-    );
-  }, [clearTimers]);
+      if (how === 'recorded') {
+        PLANNING_STEPS.forEach((_, i) => later(() => setStep(i + 1), gap * (i + 1)));
+        later(() => {
+          setMeta({ source: 'recorded', notes: [], dropped: [] });
+          dispatch({ type: 'ready', decisions: sc.plan.map((a) => decide(a, sc.ctx)) });
+        }, gap * (PLANNING_STEPS.length + 1));
+        return;
+      }
+
+      LIVE_STEPS.slice(0, -1).forEach((_, i) => later(() => setStep(i + 1), gap * (i + 1)));
+      const earliest = Date.now() + gap * LIVE_STEPS.length;
+      const controller = new AbortController();
+      inflight.current = controller;
+      fetchLivePlan(controller.signal)
+        .then((plan) => {
+          later(() => {
+            setStep(LIVE_STEPS.length);
+            setMeta({ source: 'live', notes: plan.notes, dropped: plan.dropped });
+            // The model proposed; the same fixed rules decide, here as for the recorded plan.
+            dispatch({ type: 'ready', decisions: plan.actions.map((a) => decide(a, sc.ctx)) });
+          }, Math.max(0, earliest - Date.now()));
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          timers.current.forEach((t) => window.clearTimeout(t));
+          timers.current = [];
+          dispatch({ type: 'failed', message: error instanceof Error ? error.message : 'Planning failed.' });
+        });
+    },
+    [clearTimers],
+  );
 
   const reset = useCallback(() => {
     clearTimers();
@@ -85,6 +144,7 @@ export function Countersign() {
   const restoreFocus = useRef<string | null>(null);
   useEffect(() => {
     if (state.phase === 'ready' && handledCount === 0 && prevHandled.current === 0) focusTarget('brief');
+    if (state.phase === 'failed') focusTarget('failed');
   }, [state.phase, handledCount]);
   useEffect(() => {
     if (handledCount > prevHandled.current) {
@@ -138,9 +198,29 @@ export function Countersign() {
           <section className="ask" aria-label="The request">
             <p className="ask__who">{COMPANY.name} · you asked Claude</p>
             <p className="ask__quote">“{TASK}”</p>
-            <button type="button" className="btn btn--primary" onClick={run}>
+            {liveAvailable ? (
+              <fieldset className="mode">
+                <legend className="sr-only">How to plan</legend>
+                <label className="mode__option">
+                  <input type="radio" name="mode" checked={mode === 'live'} onChange={() => setMode('live')} />
+                  <span>
+                    <span className="mode__name">Live with Claude</span>
+                    <span className="mode__hint">Claude plans from the same books each run. Takes a few seconds.</span>
+                  </span>
+                </label>
+                <label className="mode__option">
+                  <input type="radio" name="mode" checked={mode === 'recorded'} onChange={() => setMode('recorded')} />
+                  <span>
+                    <span className="mode__name">Recorded plan</span>
+                    <span className="mode__hint">The same plan every time.</span>
+                  </span>
+                </label>
+              </fieldset>
+            ) : null}
+            <button type="button" className="btn btn--primary" onClick={() => run(liveAvailable ? mode : 'recorded')}>
               Run month-end <Icon name="arrow" size={16} />
             </button>
+            {!liveAvailable ? <p className="ask__who">Recorded plan. Live planning is off on this server.</p> : null}
           </section>
 
           <ul className="tiers-legend" aria-label="The four tiers">
@@ -167,14 +247,50 @@ export function Countersign() {
             <p className="ask__who">You asked Claude</p>
             <p className="ask__quote">“{TASK}”</p>
           </section>
-          <PlanningSteps step={step} />
+          <PlanningSteps steps={mode === 'live' && liveAvailable ? LIVE_STEPS : PLANNING_STEPS} step={step} />
+        </>
+      ) : null}
+
+      {state.phase === 'failed' ? (
+        <>
+          <section className="ask" aria-label="The request">
+            <p className="ask__who">You asked Claude</p>
+            <p className="ask__quote">“{TASK}”</p>
+          </section>
+          <section className="failed" role="alert">
+            <h2 className="failed__title" tabIndex={-1} data-focus-target="failed">
+              Claude couldn’t plan this. Nothing was done.
+            </h2>
+            <p className="why">{state.error}</p>
+            <div className="actions actions--row">
+              <button type="button" className="btn btn--primary" onClick={() => run('live')}>
+                Try again
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setMode('recorded');
+                  run('recorded');
+                }}
+              >
+                Use the recorded plan
+              </button>
+            </div>
+          </section>
         </>
       ) : null}
 
       {state.phase === 'ready' && ctx ? (
         <>
-          <Brief open={open.length} handled={handled.length} done={logged.length} at={ctx.now} />
-          <Feed done={logged} />
+          <Brief
+            open={open.length}
+            handled={handled.length}
+            done={logged.length}
+            at={ctx.now}
+            source={meta.source === 'live' ? 'Planned live by Claude' : 'Recorded plan'}
+          />
+          <Feed done={logged} notes={meta.notes} dropped={meta.dropped} />
 
           <div className="stack" aria-label="Needs you">
             {open.map((card, i) => {
@@ -185,10 +301,11 @@ export function Countersign() {
                     card={card}
                     index={i}
                     ctx={ctx}
+                    decisions={state.decisions}
                     onVerify={() => dispatch({ type: 'verify', cardId: card.id, at: Date.now() })}
                     onReject={() => dispatch({ type: 'reject', cardId: card.id, at: Date.now() })}
                     onReroute={() => {
-                      const newCard = rerouteToAccountOnFile(card, ctx);
+                      const newCard = rerouteToAccountOnFile(card, ctx, state.decisions);
                       if (newCard) dispatch({ type: 'reroute', cardId: card.id, at: Date.now(), newCard });
                     }}
                   />

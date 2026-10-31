@@ -45,6 +45,24 @@ R6 is a second, independent catch. Even if provenance were somehow missed, payin
 
 When a document gave the instruction, the card shows the person's own request beside the document text, with the hidden line highlighted. When the hold is about the payment itself (a recent bank change, an unusual amount), it says so without blaming a document. "Pay the account on file instead" appears only when doing that would actually lower the tier.
 
+## Live planning
+
+With an API key on the server, Claude plans the month-end from the same books and documents each run. Without one, the demo uses the recorded plan and says so.
+
+- **One call, no tools.** `src/lib/planner/live.ts` makes a single structured-output request to `claude-opus-5-5` at medium effort, with server-side refusal fallback (`fallbacks: "default"`). The planner can only propose. It cannot execute anything.
+- **The planner reports who asked.** Each proposed action carries an instruction quote and separate evidence quotes, which the engine re-checks as described above. The planner is told to surface instructions it finds in documents as proposals, not to follow or drop them quietly.
+- **The gate doesn't depend on the planner being honest.** Tests run three planners through the same rules: one that surfaces the injection, one that is fooled and claims the person asked, and one that ignores the hidden line. The first two land on Tier 3; the third pays the account on file.
+- **Record fields come from the books.** Customer names, GSTINs, invoice totals and reminder emails are looked up, not taken from the model. A proposal that names a record the books don't have is dropped and listed in the log.
+- **Failure does nothing.** A refusal, a cut-off plan, an unreadable plan or an API error shows "Claude couldn't plan this. Nothing was done." with Try again and Use the recorded plan.
+
+| Variable | Effect |
+|---|---|
+| `ANTHROPIC_API_KEY` | Turns live planning on (so does `ANTHROPIC_AUTH_TOKEN`) |
+| `COUNTERSIGN_LIVE` | `off` forces the recorded plan; `on` forces live, for credentials the SDK finds without those variables |
+| `COUNTERSIGN_MODEL` | Overrides the planner model |
+
+**Cost:** the endpoint takes no input, so it can't be used as a general proxy to Claude. But anyone who can open the page can trigger a planning call billed to your key. Put a spend limit on the key, or leave live planning off for a public link.
+
 ## Run it
 
 ```bash
@@ -65,10 +83,11 @@ Built:
 - Press-and-hold confirm (pointer, touch, or hold Space), a reversibility meter that drains in real time, undo while a window is open
 - The safe path out of Tier 3: pay the account on file as a normal Tier 2 sign-off
 - Motion that carries meaning (Tier 2 settles, Tier 3 shakes once) with a `prefers-reduced-motion` path, and focus that moves to the next card after you act
+- Live planning with Claude, with the recorded plan as the fallback
 
 Not built yet:
 
-- **Live planning.** The plan is recorded. A Claude API call that turns a messy request into structured actions, with the recorded plan as fallback, is next.
+- **A run against the real API.** Live planning is tested with a mocked client and a mocked endpoint; it has not yet been run with a real key.
 - **MCP App.** Rendering the card inline in Claude is a stretch goal.
 - **Mobile polish pass**, a deployed demo link, and the video and case study.
 
@@ -82,6 +101,8 @@ Not built yet:
 
 ```
 src/lib/        types, fixtures, tiering engine, card bundling, reducer, formatting
+src/lib/planner/ live planning: schema, prompt, request, mapping to actions, errors
+src/app/api/plan/ GET reports whether live planning is on; POST plans
 src/lib/__tests__/
 src/components/ cards, hold button, reversibility meter, brief, feed
 src/app/        layout, page, styles

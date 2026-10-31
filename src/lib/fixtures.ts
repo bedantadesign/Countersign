@@ -103,7 +103,7 @@ function documents(): SourceDocument[] {
   ];
 }
 
-interface Receivable {
+export interface Receivable {
   customer: string;
   slug: string;
   invoiceNo: string;
@@ -111,7 +111,7 @@ interface Receivable {
   daysOverdue: number;
 }
 
-const RECEIVABLES: Receivable[] = [
+export const RECEIVABLES: Receivable[] = [
   { customer: 'Sagar Bakers', slug: 'sagarbakers', invoiceNo: 'MHG/26-27/1098', paise: 5_830_000, daysOverdue: 34 },
   { customer: 'Ashoka Lodges', slug: 'ashokalodges', invoiceNo: 'MHG/26-27/1102', paise: 12_400_000, daysOverdue: 28 },
   { customer: 'Meridian Café', slug: 'meridiancafe', invoiceNo: 'MHG/26-27/1107', paise: 3_675_000, daysOverdue: 21 },
@@ -121,7 +121,7 @@ const RECEIVABLES: Receivable[] = [
   { customer: 'Harbour View Hotel', slug: 'harbourview', invoiceNo: 'MHG/26-27/1130', paise: 16_640_000, daysOverdue: 9 },
 ];
 
-interface SalesInvoice {
+export interface SalesInvoice {
   customer: string;
   gstin: string;
   invoiceNo: string;
@@ -129,7 +129,7 @@ interface SalesInvoice {
   gstRatePct: number;
 }
 
-const SALES_INVOICES: SalesInvoice[] = [
+export const SALES_INVOICES: SalesInvoice[] = [
   { customer: 'Lakeview Retail LLP', gstin: '29AAHFL5521D1ZV', invoiceNo: 'MHG/26-27/1181', taxablePaise: 10_000_000, gstRatePct: 18 },
   { customer: 'Deccan Hospitality Pvt Ltd', gstin: '36AABCD8814Q1ZK', invoiceNo: 'MHG/26-27/1182', taxablePaise: 20_000_000, gstRatePct: 18 },
   { customer: 'Orchid Interiors', gstin: '29AAAFO3307B1Z9', invoiceNo: 'MHG/26-27/1183', taxablePaise: 5_000_000, gstRatePct: 18 },
@@ -139,6 +139,57 @@ const SALES_INVOICES: SalesInvoice[] = [
 ];
 
 export const invoiceTotalPaise = (i: SalesInvoice) => i.taxablePaise + (i.taxablePaise * i.gstRatePct) / 100;
+
+/** What the reconciliation found. Given to the planner as data so it can report it. */
+export const RECONCILIATION = {
+  purchaseInvoices: 41,
+  matchedToGstr2b: 39,
+  itcMismatches: 2,
+  itcAtRiskPaise: 1_422_000,
+  vendorInvoicesMatchedToPOs: 3,
+};
+
+/** A reminder draft or send. Record fields come from the books, never from the planner. */
+export function reminderAction(
+  r: Receivable,
+  kind: 'draft_reminder' | 'send_reminder',
+  id: string,
+  provenance: ProposedAction['provenance'],
+): ProposedAction {
+  return {
+    id,
+    kind,
+    title: kind === 'draft_reminder' ? `Drafted reminder for ${r.customer}` : `Remind ${r.customer}`,
+    counterparty: { id: `c-${r.slug}`, name: r.customer },
+    amountPaise: r.paise,
+    refId: r.invoiceNo,
+    email: {
+      to: `accounts@${r.slug}.example`,
+      subject: `Payment reminder: invoice ${r.invoiceNo}`,
+      body: `Hi ${r.customer} team,\n\nInvoice ${r.invoiceNo} for ${formatINR(r.paise)} is ${r.daysOverdue} days past due. If it has already been paid, please send the UTR so we can match it. Otherwise we would be grateful if you could clear it this week.\n\nThank you,\nAccounts, ${COMPANY.name}`,
+    },
+    detail: `${r.invoiceNo} · ${formatINR(r.paise)} · ${r.daysOverdue} days overdue`,
+    provenance,
+  };
+}
+
+/** An e-invoice to register. The amount is the invoice total from the books. */
+export function irnAction(s: SalesInvoice, id: string, provenance: ProposedAction['provenance']): ProposedAction {
+  return {
+    id,
+    kind: 'generate_irn',
+    title: `Generate IRN for ${s.invoiceNo}`,
+    counterparty: { id: `b-${s.gstin}`, name: s.customer, gstin: s.gstin },
+    amountPaise: invoiceTotalPaise(s),
+    refId: s.invoiceNo,
+    detail: `${s.customer} · ${s.gstin}`,
+    provenance,
+  };
+}
+
+export function vendorCounterparty(v: Vendor) {
+  return { id: v.id, name: v.name, gstin: v.gstin };
+}
 
 const HALF_HOUR = 30 * 60 * 1000;
 /** Next :00 or :30 that is at least 45 minutes away, so the countdown is always visibly running. */
@@ -169,14 +220,14 @@ export function buildScenario(now: number): Scenario {
       id: 'a-recon-gstr2b',
       kind: 'reconcile_gstr2b',
       title: 'Reconciled October purchases with GSTR-2B',
-      detail: '39 of 41 invoices matched',
+      detail: `${RECONCILIATION.matchedToGstr2b} of ${RECONCILIATION.purchaseInvoices} invoices matched`,
       provenance: user,
     },
     {
       id: 'a-recon-itc',
       kind: 'reconcile_gstr2b',
       title: 'Flagged 2 input-credit mismatches',
-      detail: `${formatINR(1_422_000)} of ITC at risk, noted for follow-up`,
+      detail: `${formatINR(RECONCILIATION.itcAtRiskPaise)} of ITC at risk, noted for follow-up`,
       provenance: user,
     },
     {
@@ -188,34 +239,12 @@ export function buildScenario(now: number): Scenario {
   );
 
   for (const r of RECEIVABLES) {
-    const email = {
-      to: `accounts@${r.slug}.example`,
-      subject: `Payment reminder: invoice ${r.invoiceNo}`,
-      body: `Hi ${r.customer} team,\n\nInvoice ${r.invoiceNo} for ${formatINR(r.paise)} is ${r.daysOverdue} days past due. If it has already been paid, please send the UTR so we can match it. Otherwise we would be grateful if you could clear it this week.\n\nThank you,\nAccounts, ${COMPANY.name}`,
-    };
-    const base = {
-      counterparty: { id: `c-${r.slug}`, name: r.customer },
-      amountPaise: r.paise,
-      refId: r.invoiceNo,
-      email,
-      detail: `${r.invoiceNo} · ${formatINR(r.paise)} · ${r.daysOverdue} days overdue`,
-      provenance: user,
-    };
-    plan.push({ ...base, id: `a-draft-${r.slug}`, kind: 'draft_reminder', title: `Drafted reminder for ${r.customer}` });
-    plan.push({ ...base, id: `a-send-${r.slug}`, kind: 'send_reminder', title: `Remind ${r.customer}` });
+    plan.push(reminderAction(r, 'draft_reminder', `a-draft-${r.slug}`, user));
+    plan.push(reminderAction(r, 'send_reminder', `a-send-${r.slug}`, user));
   }
 
   for (const s of SALES_INVOICES) {
-    plan.push({
-      id: `a-irn-${s.invoiceNo.slice(-4)}`,
-      kind: 'generate_irn',
-      title: `Generate IRN for ${s.invoiceNo}`,
-      counterparty: { id: `b-${s.gstin}`, name: s.customer, gstin: s.gstin },
-      amountPaise: invoiceTotalPaise(s),
-      refId: s.invoiceNo,
-      detail: `${s.customer} · ${s.gstin}`,
-      provenance: user,
-    });
+    plan.push(irnAction(s, `a-irn-${s.invoiceNo.slice(-4)}`, user));
   }
 
   plan.push(
@@ -223,7 +252,7 @@ export function buildScenario(now: number): Scenario {
       id: 'a-pay-sundaram',
       kind: 'pay_vendor',
       title: 'Pay Sundaram Packaging',
-      counterparty: { id: 'v-sundaram', name: VENDORS['v-sundaram']!.name, gstin: VENDORS['v-sundaram']!.gstin },
+      counterparty: vendorCounterparty(VENDORS['v-sundaram']!),
       amountPaise: 24_000_000,
       refId: 'SP/2610/771',
       bank: VENDORS['v-sundaram']!.bank,
@@ -236,7 +265,7 @@ export function buildScenario(now: number): Scenario {
       id: 'a-pay-kaveri',
       kind: 'pay_vendor',
       title: 'Pay Kaveri Logistics',
-      counterparty: { id: 'v-kaveri', name: VENDORS['v-kaveri']!.name, gstin: VENDORS['v-kaveri']!.gstin },
+      counterparty: vendorCounterparty(VENDORS['v-kaveri']!),
       amountPaise: 6_850_000,
       refId: 'KL/1026/318',
       bank: VENDORS['v-kaveri']!.bank,
@@ -255,7 +284,7 @@ export function buildScenario(now: number): Scenario {
       id: 'a-bank-anand',
       kind: 'update_bank_details',
       title: 'Update bank account for Anand Textile Mills',
-      counterparty: { id: anand.id, name: anand.name, gstin: anand.gstin },
+      counterparty: vendorCounterparty(anand),
       bank: INJECTED_BANK,
       provenance: fromDocument,
     },
@@ -263,7 +292,7 @@ export function buildScenario(now: number): Scenario {
       id: 'a-pay-anand',
       kind: 'pay_vendor',
       title: 'Pay Anand Textile Mills',
-      counterparty: { id: anand.id, name: anand.name, gstin: anand.gstin },
+      counterparty: vendorCounterparty(anand),
       amountPaise: 31_500_000,
       refId: 'ATM/26-27/0423',
       bank: INJECTED_BANK,

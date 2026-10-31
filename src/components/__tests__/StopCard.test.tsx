@@ -9,7 +9,9 @@ import type { Card, Context, ProposedAction } from '@/lib/types';
 const { ctx, plan } = buildScenario(Date.parse('2026-10-30T12:00:00Z'));
 const noop = () => {};
 const render = (card: Card, c: Context = ctx) =>
-  renderToStaticMarkup(<StopCard card={card} index={0} ctx={c} onVerify={noop} onReroute={noop} onReject={noop} />);
+  renderToStaticMarkup(
+    <StopCard card={card} index={0} ctx={c} decisions={card.items} onVerify={noop} onReroute={noop} onReject={noop} />,
+  );
 
 const v = VENDORS['v-sundaram']!;
 const payment = (overrides: Partial<ProposedAction>): ProposedAction => ({

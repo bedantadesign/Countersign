@@ -1,4 +1,5 @@
 import type { Decision } from '@/lib/types';
+import type { Dropped } from '@/lib/planner/map';
 import { Icon } from './Icon';
 
 interface Line {
@@ -21,8 +22,20 @@ function toLines(done: Decision[]): Line[] {
   return lines;
 }
 
-export function Feed({ done }: { done: Decision[] }) {
-  const lines = toLines(done);
+interface Props {
+  done: Decision[];
+  /** Observations from the planner. Shown, never acted on. */
+  notes?: string[];
+  /** Proposals that named records the books don't have. */
+  dropped?: Dropped[];
+}
+
+export function Feed({ done, notes = [], dropped = [] }: Props) {
+  const lines = [
+    ...toLines(done),
+    ...notes.map((n, i) => ({ key: `note-${i}`, title: `Claude noted: ${n}`, detail: undefined })),
+    ...dropped.map((d, i) => ({ key: `dropped-${i}`, title: `Ignored a proposal: ${d.title}`, detail: d.reason })),
+  ];
   return (
     <ul className="feed" aria-label="Done and logged">
       {lines.map((l, i) => (

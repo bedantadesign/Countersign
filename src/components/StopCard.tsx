@@ -1,6 +1,6 @@
 'use client';
 
-import type { Card, Context, DocBlock } from '@/lib/types';
+import type { Card, Context, Decision, DocBlock } from '@/lib/types';
 import { formatDate, formatINR, groupAccount } from '@/lib/format';
 import { hiddenText, normalise } from '@/lib/documents';
 import { rerouteToAccountOnFile } from '@/lib/cards';
@@ -13,6 +13,8 @@ interface Props {
   card: Card;
   index: number;
   ctx: Context;
+  /** Everything in the plan, so the safe path is never offered for an invoice already being paid. */
+  decisions: Decision[];
   onVerify: () => void;
   onReroute: () => void;
   onReject: () => void;
@@ -63,7 +65,7 @@ const digits = (s: string) => s.replace(/\D/g, '');
  * When the hold is about the payment itself (a recent bank change, an unusual amount), says so
  * plainly and offers only the paths that resolve it.
  */
-export function StopCard({ card, index, ctx, onVerify, onReroute, onReject }: Props) {
+export function StopCard({ card, index, ctx, decisions, onVerify, onReroute, onReject }: Props) {
   const pay = card.items.find((d) => d.action.kind === 'pay_vendor');
   const lead = pay ?? card.items[0]!;
   const vendor = lead.action.counterparty ? ctx.vendors[lead.action.counterparty.id] : undefined;
@@ -71,7 +73,7 @@ export function StopCard({ card, index, ctx, onVerify, onReroute, onReject }: Pr
     lead.provenance.origin === 'document' ? ctx.documents.find((d) => d.id === lead.provenance.documentId) : undefined;
   const newBank = vendor && lead.action.bank && !sameAccount(lead.action.bank, vendor.bank) ? lead.action.bank : undefined;
   const amount = pay?.action.amountPaise;
-  const canReroute = rerouteToAccountOnFile(card, ctx) !== null;
+  const canReroute = rerouteToAccountOnFile(card, ctx, decisions) !== null;
 
   const quote = lead.provenance.quote;
   const inHiddenText = !!doc && !!quote && normalise(hiddenText(doc)).includes(normalise(quote));

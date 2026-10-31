@@ -1,5 +1,5 @@
 import type { ActionKind, Card, Context, Decision, ProposedAction } from './types';
-import { decide } from './tiering';
+import { decide, sameAccount } from './tiering';
 
 /** Needs-you cards read in the order of how little they should be trusted. */
 const KIND_ORDER: ActionKind[] = ['update_bank_details', 'pay_vendor', 'generate_irn', 'send_reminder'];
@@ -43,12 +43,24 @@ export function loggedDecisions(decisions: Decision[]): Decision[] {
  * The safe path from a held payment: pay the account on file, as a normal sign-off.
  * The new action comes from the person's own choice, not from the document.
  * Returns null when paying the account on file would still be held, so the path is never offered
- * for holds it cannot fix (a recent bank change, an unusual amount).
+ * for holds it cannot fix (a recent bank change, an unusual amount), and when the plan already
+ * pays that invoice to the account on file, so the person can't pay it twice.
  */
-export function rerouteToAccountOnFile(card: Card, ctx: Context): Card | null {
+export function rerouteToAccountOnFile(card: Card, ctx: Context, decisions: Decision[] = []): Card | null {
   const pay = card.items.find((d) => d.action.kind === 'pay_vendor');
   const vendor = pay?.action.counterparty ? ctx.vendors[pay.action.counterparty.id] : undefined;
   if (!pay || !vendor) return null;
+
+  const alreadyPaid = decisions.some(
+    (d) =>
+      d.action.kind === 'pay_vendor' &&
+      d.action.id !== pay.action.id &&
+      d.action.counterparty?.id === vendor.id &&
+      d.action.refId === pay.action.refId &&
+      d.action.bank !== undefined &&
+      sameAccount(d.action.bank, vendor.bank),
+  );
+  if (alreadyPaid) return null;
 
   const action: ProposedAction = {
     ...pay.action,

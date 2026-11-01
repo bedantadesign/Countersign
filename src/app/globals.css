@@ -119,6 +119,12 @@ button {
   gap: 16px;
 }
 
+.top__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .wordmark {
   display: inline-flex;
   align-items: center;

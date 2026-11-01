@@ -8,6 +8,13 @@ export interface LivePlan {
   model: string;
 }
 
+/** Where a live plan comes from: the site's own API, or the MCP server when embedded in a chat. */
+export interface Planner {
+  /** Whether live planning is on. Resolves false rather than rejecting. */
+  available(): Promise<boolean>;
+  plan(signal: AbortSignal): Promise<LivePlan>;
+}
+
 /** False when the server has no credentials, there is no server at all (a static host), or it doesn't answer in 5s. */
 export async function fetchLiveAvailable(): Promise<boolean> {
   try {
@@ -34,3 +41,5 @@ export async function fetchLivePlan(signal: AbortSignal): Promise<LivePlan> {
   }
   return { actions: body.actions, dropped: body.dropped ?? [], notes: body.notes ?? [], model: body.model ?? '' };
 }
+
+export const httpPlanner: Planner = { available: fetchLiveAvailable, plan: fetchLivePlan };

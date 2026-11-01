@@ -63,13 +63,27 @@ With an API key on the server, Claude plans the month-end from the same books an
 
 **Cost:** the endpoint takes no input, so it can't be used as a general proxy to Claude. But anyone who can open the page can trigger a planning call billed to your key. Put a spend limit on the key, or leave live planning off for a public link.
 
+## Inside a chat (MCP App)
+
+The same review also runs inline in a chat, as an [MCP App](https://github.com/modelcontextprotocol/ext-apps). The site serves an MCP server at `/mcp` (Streamable HTTP, stateless). Add `https://<your deployment>/mcp` to Claude as a custom connector and ask it to run the Countersign month-end.
+
+- **One tool for the model.** `run_month_end` takes no input and plans the fixed scenario, live when the server has a key and recorded otherwise. The plan goes to the view in `structuredContent`. The model only gets a short text summary, and the injected account stays out of it.
+- **The rules still pick the tier.** The view runs the same engine on the proposed actions as the website does. The chat model can't approve anything: sign-off happens in the view.
+- **Reopening a conversation doesn't plan again.** The view shows the plan from the original tool call. Try again and Replay ask for a fresh plan through `plan_month_end`, which only the view can call.
+- **The model hears what the person did.** After each decision the view sends the chat a plain-text account of what is waiting and what was handled, so a follow-up question gets a true answer.
+- **It looks like part of the chat.** It is 500px tall inline and scrolls inside, with a full-screen toggle where the host offers one. On a light host it takes the host's fonts, radii and neutral colours. On a dark host it keeps its own light palette, because the tier colours are tuned for it. Focus stays in the chat until the person acts inside the view.
+
+The view is one self-contained HTML file built by `npm run build:view` (part of `npm run build`) from `src/mcp/view/`. The e2e tests load it through a small test host that uses the SDK's own `AppBridge` and a real MCP client against `/mcp`.
+
+The same cost note applies: anyone with the `/mcp` URL can trigger a planning call on your key.
+
 ## Run it
 
 ```bash
 npm install
 npm run dev      # http://localhost:3000
 npm test         # unit tests: tiering, provenance, bundling, reducer, formatting, Tier 3 card rendering
-npm run test:e2e # browser tests: builds, serves on :3100, drives the real flow in Chromium
+npm run test:e2e # browser tests: builds, serves on :3100, drives the real flow in Chromium, and the MCP App in a test chat host
 npm run typecheck
 ```
 
@@ -83,13 +97,14 @@ Built:
 - Press-and-hold confirm (pointer, touch, or hold Space), a reversibility meter that drains in real time, undo while a window is open
 - The safe path out of Tier 3: pay the account on file as a normal Tier 2 sign-off
 - Motion that carries meaning (Tier 2 settles, Tier 3 shakes once) with a `prefers-reduced-motion` path, and focus that moves to the next card after you act
-- Live planning with Claude, with the recorded plan as the fallback
+- Live planning with Claude, with the recorded plan as the fallback, run against the real API on the deployed site
+- A mobile pass at 390px
+- The MCP App: the same review inline in a chat
 
 Not built yet:
 
-- **A run against the real API.** Live planning is tested with a mocked client and a mocked endpoint; it has not yet been run with a real key.
-- **MCP App.** Rendering the card inline in Claude is a stretch goal.
-- **Mobile polish pass**, a deployed demo link, and the video and case study.
+- **A dark palette** for the MCP App on dark hosts.
+- **The video and case study.**
 
 ## Things to check before you rely on this
 
@@ -103,8 +118,10 @@ Not built yet:
 src/lib/        types, fixtures, tiering engine, card bundling, reducer, formatting
 src/lib/planner/ live planning: schema, prompt, request, mapping to actions, errors
 src/app/api/plan/ GET reports whether live planning is on; POST plans
+src/app/mcp/    the MCP endpoint
+src/mcp/        MCP server (tools and view resource) and the view: one HTML file built with Vite
 src/lib/__tests__/
 src/components/ cards, hold button, reversibility meter, brief, feed
 src/app/        layout, page, styles
-e2e/            Playwright browser tests
+e2e/            Playwright browser tests; e2e/mcp-host/ is the test chat host
 ```

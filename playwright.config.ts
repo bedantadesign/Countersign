@@ -4,6 +4,8 @@ const PORT = 3100;
 
 export default defineConfig({
   testDir: './e2e',
+  // Bundles the test chat host that the MCP App tests load.
+  globalSetup: './e2e/mcp-host/build.ts',
   timeout: 60_000,
   fullyParallel: true,
   reporter: 'list',

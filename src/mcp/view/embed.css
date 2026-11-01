@@ -1,0 +1,71 @@
+/* Countersign inside a chat (MCP App). Loaded after globals.css; only applies under html[data-embed]. */
+
+/* Headlines keep the editorial serif. Latin and Latin Extended only: the latter carries ₹. */
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(@fontsource-variable/newsreader/files/newsreader-latin-ext-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url(@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2) format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Body text, radii and shadows come from the host, so the review reads as part of the chat. */
+:root[data-embed] {
+  --font: var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  --radius: var(--border-radius-lg, 14px);
+  --radius-sm: var(--border-radius-md, 10px);
+}
+
+/*
+ * On a light host, the neutrals come from the host too. On a dark host the review stays on its own paper:
+ * the tier colours are tuned for a light ground, and a warning has to read as one.
+ */
+:root[data-embed]:not([data-theme='dark']) {
+  --bg: var(--color-background-secondary, #f6f2e9);
+  --surface: var(--color-background-primary, #fffdf8);
+  --surface-2: var(--color-background-tertiary, #f1ece1);
+  --line: var(--color-border-primary, #e0d8c8);
+  --line-soft: var(--color-border-tertiary, #ebe5d8);
+  --text: var(--color-text-primary, #1d1b18);
+  --text-2: var(--color-text-secondary, #4a453e);
+  --text-3: var(--color-text-tertiary, #6b645a);
+}
+
+:root[data-embed],
+:root[data-embed] body {
+  background: var(--bg);
+}
+
+:root[data-embed] body {
+  min-height: 0;
+}
+
+/* A fixed inline height: the review scrolls inside the frame instead of pushing the chat away. */
+:root[data-embed] .shell {
+  height: var(--embed-h, 500px);
+  max-width: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px max(16px, calc((100% - 728px) / 2)) 24px;
+  gap: 24px;
+}
+
+:root[data-embed][data-display='fullscreen'] .shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.btn--icon {
+  padding-inline: 8px;
+}

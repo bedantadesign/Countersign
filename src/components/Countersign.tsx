@@ -5,7 +5,8 @@ import { buildScenario, COMPANY, PLANNING_STEPS, TASK, type Scenario } from '@/l
 import { decide } from '@/lib/tiering';
 import { loggedDecisions, rerouteToAccountOnFile } from '@/lib/cards';
 import { handledCards, initialState, openCards, reducer } from '@/lib/reducer';
-import { fetchLiveAvailable, fetchLivePlan } from '@/lib/planner/client';
+import { httpPlanner, type Planner } from '@/lib/planner/client';
+import { progressReport } from '@/lib/report';
 import type { Dropped } from '@/lib/planner/map';
 import { BatchCard } from './BatchCard';
 import { Brief } from './Brief';
@@ -57,7 +58,21 @@ function focusTarget(id: string) {
   document.querySelector<HTMLElement>(`[data-focus-target="${id}"]`)?.focus({ preventScroll: false });
 }
 
-export function Countersign() {
+interface Props {
+  /** Where live plans come from. The site's API by default; the MCP server inside a chat. */
+  planner?: Planner;
+  /**
+   * Inside a chat (MCP App): no intro, the run starts as soon as the planner answers, and the
+   * steps don't replay work that already happened.
+   */
+  embedded?: boolean;
+  /** Plain-text account of the review after each change, for the chat model to read. */
+  onReport?: (report: string) => void;
+  /** Extra controls for the top bar, such as the chat host's fullscreen toggle. */
+  toolbar?: React.ReactNode;
+}
+
+export function Countersign({ planner = httpPlanner, embedded = false, onReport, toolbar }: Props = {}) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [step, setStep] = useState(0);
@@ -68,10 +83,11 @@ export function Countersign() {
   const timers = useRef<number[]>([]);
   const inflight = useRef<AbortController | null>(null);
   const tick = useNow(state.phase === 'ready');
+  const shell = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchLiveAvailable().then((live) => {
+    planner.available().then((live) => {
       if (cancelled) return;
       setLiveAvailable(live);
       if (live) setMode('live');
@@ -79,7 +95,7 @@ export function Countersign() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [planner]);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -96,7 +112,7 @@ export function Countersign() {
       setScenario(sc);
       setStep(0);
       dispatch({ type: 'planning' });
-      const gap = prefersReducedMotion() ? 0 : 420;
+      const gap = embedded || prefersReducedMotion() ? 0 : 420;
       const later = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
 
       if (how === 'recorded') {
@@ -112,7 +128,8 @@ export function Countersign() {
       const earliest = Date.now() + gap * LIVE_STEPS.length;
       const controller = new AbortController();
       inflight.current = controller;
-      fetchLivePlan(controller.signal)
+      planner
+        .plan(controller.signal)
         .then((plan) => {
           later(() => {
             setStep(LIVE_STEPS.length);
@@ -128,14 +145,29 @@ export function Countersign() {
           dispatch({ type: 'failed', message: error instanceof Error ? error.message : 'Planning failed.' });
         });
     },
-    [clearTimers],
+    [clearTimers, embedded, planner],
   );
 
+  // Embedded, the person already asked in the chat: start as soon as we know how to plan, and again on replay.
+  useEffect(() => {
+    if (embedded && state.phase === 'idle' && liveAvailable !== null) run(liveAvailable ? mode : 'recorded');
+  }, [embedded, state.phase, liveAvailable, mode, run]);
+
+  // Inside a chat, the first plan arrives on its own: moving focus then would pull it out of the chat's
+  // message box. Focus follows the plan only once the person has started a run here.
+  const userStarted = useRef(!embedded);
+  const start = (how: Mode) => {
+    userStarted.current = true;
+    run(how);
+  };
+
   const reset = useCallback(() => {
+    userStarted.current = true;
     clearTimers();
     setScenario(null);
     dispatch({ type: 'reset' });
     window.scrollTo({ top: 0 });
+    shell.current?.scrollTo({ top: 0 });
   }, [clearTimers]);
 
   // Focus: the brief when the plan lands, the next open card when one is handled,
@@ -144,6 +176,7 @@ export function Countersign() {
   const prevHandled = useRef(0);
   const restoreFocus = useRef<string | null>(null);
   useEffect(() => {
+    if (!userStarted.current) return;
     if (state.phase === 'ready' && handledCount === 0 && prevHandled.current === 0) focusTarget('brief');
     if (state.phase === 'failed') focusTarget('failed');
   }, [state.phase, handledCount]);
@@ -166,8 +199,13 @@ export function Countersign() {
   // leaves a stale tick behind, the scenario's own start time is the honest floor.
   const now = Math.max(tick, ctx?.now ?? 0);
 
+  const report = ctx ? progressReport(state, ctx) : null;
+  useEffect(() => {
+    if (report) onReport?.(report);
+  }, [report, onReport]);
+
   return (
-    <main className="shell">
+    <main className="shell" ref={shell}>
       <div className="top">
         <span className="wordmark">
           <span className="wordmark__seal" aria-hidden="true">
@@ -175,16 +213,29 @@ export function Countersign() {
           </span>
           Countersign
         </span>
-        {state.phase === 'idle' ? (
-          <span className="concept-tag">Concept prototype</span>
-        ) : (
-          <button type="button" className="btn btn--quiet" onClick={reset}>
-            <Icon name="undo" size={14} /> Replay scenario
-          </button>
-        )}
+        <span className="top__actions">
+          {state.phase === 'idle' ? (
+            <span className="concept-tag">Concept prototype</span>
+          ) : (
+            <button type="button" className="btn btn--quiet" onClick={reset}>
+              <Icon name="undo" size={14} /> Replay scenario
+            </button>
+          )}
+          {toolbar}
+        </span>
       </div>
 
-      {state.phase === 'idle' ? (
+      {state.phase === 'idle' && embedded ? (
+        <section className="ask" aria-label="The request">
+          <p className="ask__who">{COMPANY.name} · you asked Claude</p>
+          <p className="ask__quote">“{TASK}”</p>
+          <p className="ask__who" role="status">
+            Getting the plan…
+          </p>
+        </section>
+      ) : null}
+
+      {state.phase === 'idle' && !embedded ? (
         <>
           <section className="intro">
             <p className="eyebrow">How an agent should ask</p>
@@ -222,7 +273,7 @@ export function Countersign() {
               type="button"
               className="btn btn--primary"
               disabled={liveAvailable === null}
-              onClick={() => run(liveAvailable ? mode : 'recorded')}
+              onClick={() => start(liveAvailable ? mode : 'recorded')}
             >
               Run month-end <Icon name="arrow" size={16} />
             </button>
@@ -271,7 +322,7 @@ export function Countersign() {
             </h2>
             <p className="why">{state.error}</p>
             <div className="actions actions--row">
-              <button type="button" className="btn btn--primary" onClick={() => run('live')}>
+              <button type="button" className="btn btn--primary" onClick={() => start('live')}>
                 Try again
               </button>
               <button
@@ -279,7 +330,7 @@ export function Countersign() {
                 className="btn"
                 onClick={() => {
                   setMode('recorded');
-                  run('recorded');
+                  start('recorded');
                 }}
               >
                 Use the recorded plan

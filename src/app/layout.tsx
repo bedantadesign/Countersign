@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import '@fontsource-variable/inter';
+import '@fontsource-variable/newsreader';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -9,8 +10,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0a1020',
-  colorScheme: 'dark',
+  themeColor: '#f6f2e9',
+  colorScheme: 'light',
   width: 'device-width',
   initialScale: 1,
 };

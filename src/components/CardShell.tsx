@@ -28,10 +28,12 @@ export function CardShell({ id, tier, index, title, total, why, children }: Prop
     <article className="card" data-tier={tier} style={{ '--i': index } as React.CSSProperties} aria-labelledby={`${id}-title`}>
       <header className="card__head">
         <TierBadge tier={tier} />
-        <h2 className="card__title" id={`${id}-title`} tabIndex={-1} data-focus-target={id}>
-          {title}
-        </h2>
-        {total ? <p className="card__total">{total}</p> : null}
+        <div className="card__headline">
+          <h2 className="card__title" id={`${id}-title`} tabIndex={-1} data-focus-target={id}>
+            {title}
+          </h2>
+          {total ? <p className="card__total">{total}</p> : null}
+        </div>
         <p className="why">{why}</p>
       </header>
       {children}

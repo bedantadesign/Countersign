@@ -29,6 +29,30 @@ export function CountersignCard({ card, index, ctx, now, onConfirm }: Props) {
   const title = isIrn ? `Generate ${plural(n, 'e-invoice IRN')}` : `Pay ${plural(n, 'vendor')}`;
   const holdLabel = isIrn ? `Hold to generate ${n} IRNs` : `Hold to pay ${formatINR(cardTotalPaise(card))}`;
 
+  const row = ({ action }: Card['items'][number]) => {
+    const vendor = action.counterparty ? ctx.vendors[action.counterparty.id] : undefined;
+    const onFile = vendor && action.bank ? sameAccount(action.bank, vendor.bank) : false;
+    return (
+      <li className="line" key={action.id}>
+        <span className="line__name">{action.counterparty?.name}</span>
+        <span className="line__amount">{formatINR(action.amountPaise ?? 0)}</span>
+        <span className="line__sub">
+          {isIrn
+            ? `${action.refId} · ${action.counterparty?.gstin}`
+            : `Invoice ${action.refId} · to ${action.bank ? maskAccount(action.bank.accountNumber) : ''}`}
+        </span>
+        {!isIrn && onFile ? (
+          <span className="line__flag on-file">
+            <Icon name="check" size={12} /> Account on file
+          </span>
+        ) : null}
+      </li>
+    );
+  };
+  // Every item stays one click away; long lists show the first few so the card stays proportionate.
+  const shown = card.items.length > 4 ? card.items.slice(0, 3) : card.items;
+  const rest = card.items.slice(shown.length);
+
   return (
     <CardShell
       id={card.id}
@@ -38,28 +62,15 @@ export function CountersignCard({ card, index, ctx, now, onConfirm }: Props) {
       total={formatINR(cardTotalPaise(card))}
       why={first.why}
     >
-      <ul className="lines">
-        {card.items.map(({ action }) => {
-          const vendor = action.counterparty ? ctx.vendors[action.counterparty.id] : undefined;
-          const onFile = vendor && action.bank ? sameAccount(action.bank, vendor.bank) : false;
-          return (
-            <li className="line" key={action.id}>
-              <span className="line__name">{action.counterparty?.name}</span>
-              <span className="line__amount">{formatINR(action.amountPaise ?? 0)}</span>
-              <span className="line__sub">
-                {isIrn
-                  ? `${action.refId} · ${action.counterparty?.gstin}`
-                  : `Invoice ${action.refId} · to ${action.bank ? maskAccount(action.bank.accountNumber) : ''}`}
-              </span>
-              {!isIrn && onFile ? (
-                <span className="line__flag on-file">
-                  <Icon name="check" size={12} /> Account on file
-                </span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+      <ul className="lines">{shown.map(row)}</ul>
+      {rest.length ? (
+        <details className="details">
+          <summary>
+            Show {rest.length} more {isIrn ? 'invoices' : 'payments'} <Icon name="chevron" size={12} />
+          </summary>
+          <ul className="lines">{rest.map(row)}</ul>
+        </details>
+      ) : null}
 
       <div className="note">
         <span className="note__label">When you confirm</span>

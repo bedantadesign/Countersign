@@ -39,14 +39,12 @@ export function BatchCard({ card, index, onApprove }: Props) {
       why={card.items[0]!.why}
     >
       {!choosing ? (
-        <div className="pile" aria-hidden="true">
-          {n > 2 ? <div className="pile__back" style={{ '--n': 2 } as React.CSSProperties} /> : null}
-          {n > 1 ? <div className="pile__back" style={{ '--n': 1 } as React.CSSProperties} /> : null}
-          <div className="pile__mail">
-            <span className="pile__count">1 of {n}</span>
-            <p className="pile__to">To {card.items[0]!.action.email?.to}</p>
-            <p>{card.items[0]!.action.email?.subject}</p>
-          </div>
+        <div className="preview">
+          <p className="preview__to">
+            To {card.items[0]!.action.email?.to}
+            {n > 1 ? ` and ${n - 1} more` : ''}
+          </p>
+          <p>{card.items[0]!.action.email?.subject}</p>
         </div>
       ) : (
         <ul className="lines">

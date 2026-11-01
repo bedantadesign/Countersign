@@ -1,29 +1,37 @@
 /* Countersign: tokens, base, then components. Spacing is a strict 4/8px scale. One typeface. */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --bg: #0a1020;
-  --surface: #101a31;
-  --surface-2: #15213f;
-  --line: #243459;
-  --line-soft: #1a2746;
-  --text: #e8eefc;
-  --text-2: #a9b6d6;
-  --text-3: #8191b6;
-  --focus: #9ec5ff;
+  --bg: #f6f2e9;
+  --surface: #fffdf8;
+  --surface-2: #f1ece1;
+  --line: #e0d8c8;
+  --line-soft: #ebe5d8;
+  --text: #1d1b18;
+  --text-2: #4a453e;
+  --text-3: #6b645a;
+  --focus: #2c5aa0;
 
-  --t0: #8da0c8;
-  --t1: #6cb0ff;
-  --t2: #f3bb4f;
-  --t3: #ff7a6b;
+  /* --tier* is for text and borders; --tier-fill for bars and filled buttons. */
+  --t0: #7c7468;
+  --t1: #2c5aa0;
+  --t2: #8a5a00;
+  --t3: #b3311c;
+  --t0-fill: #b9b1a3;
+  --t1-fill: #2c5aa0;
+  --t2-fill: #dc9a2a;
+  --t3-fill: #b3311c;
 
-  --paper: #f3efe6;
+  --paper: #ffffff;
   --paper-ink: #2b2a27;
+  --ok: #2f7a4a;
 
   --font: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --radius: 16px;
-  --radius-sm: 12px;
+  --serif: 'Newsreader Variable', 'Iowan Old Style', Charter, Georgia, serif;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(60, 45, 20, 0.05), 0 4px 16px rgba(60, 45, 20, 0.05);
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -40,16 +48,11 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(to bottom, rgba(10, 16, 32, 0) 0, var(--bg) 640px),
-    linear-gradient(rgba(130, 160, 230, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(130, 160, 230, 0.06) 1px, transparent 1px);
-  background-size: auto, 32px 32px, 32px 32px;
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.55;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'cv11', 'ss03';
   -webkit-font-smoothing: antialiased;
@@ -101,12 +104,12 @@ button {
 /* ---------- Shell ---------- */
 
 .shell {
-  max-width: 720px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 24px 16px 64px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
 }
 
 .top {
@@ -128,8 +131,8 @@ button {
   width: 24px;
   height: 24px;
   border-radius: 8px;
-  border: 1.5px solid var(--t2);
-  color: var(--t2);
+  border: 1.5px solid var(--text);
+  color: var(--text);
   display: grid;
   place-items: center;
 }
@@ -156,7 +159,7 @@ button {
 }
 .btn:hover {
   background: var(--surface-2);
-  border-color: #34477a;
+  border-color: #cfc5b1;
 }
 .btn[disabled] {
   opacity: 0.45;
@@ -168,17 +171,17 @@ button {
   border-color: var(--text);
 }
 .btn--primary:hover {
-  background: #fff;
-  border-color: #fff;
+  background: #3a362f;
+  border-color: #3a362f;
 }
 .btn--tier {
-  background: var(--tier);
-  border-color: var(--tier);
-  color: #0a1020;
+  background: var(--tier-fill);
+  border-color: var(--tier-fill);
+  color: #fff;
 }
 .btn--tier:hover {
-  background: color-mix(in oklab, var(--tier) 82%, #fff);
-  border-color: var(--tier);
+  background: color-mix(in oklab, var(--tier-fill) 86%, #000);
+  border-color: color-mix(in oklab, var(--tier-fill) 86%, #000);
 }
 .btn--quiet {
   border-color: transparent;
@@ -197,22 +200,21 @@ button {
   padding-top: 24px;
 }
 .eyebrow {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-3);
 }
 .intro h1 {
-  font-size: clamp(28px, 7vw, 40px);
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  font-weight: 650;
+  font-family: var(--serif);
+  font-size: clamp(34px, 8vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 500;
   text-wrap: balance;
 }
 .intro p {
   color: var(--text-2);
-  font-size: 16px;
+  font-size: 17px;
   max-width: 56ch;
   text-wrap: pretty;
 }
@@ -221,14 +223,16 @@ button {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
+  padding: 20px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow);
 }
 .ask__quote {
-  font-size: 20px;
-  line-height: 1.3;
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 1.25;
   letter-spacing: -0.01em;
 }
 .ask__who {
@@ -309,10 +313,12 @@ button {
   padding: 16px;
   border: 1px solid color-mix(in oklab, var(--t3) 60%, var(--line));
   border-radius: var(--radius);
-  background: color-mix(in oklab, var(--t3) 5%, var(--surface));
+  background: color-mix(in oklab, var(--t3) 4%, var(--surface));
 }
 .failed__title {
-  font-size: 20px;
+  font-family: var(--serif);
+  font-weight: 500 !important;
+  font-size: 24px;
   line-height: 1.25;
   letter-spacing: -0.015em;
   font-weight: 650;
@@ -320,10 +326,10 @@ button {
 
 /* ---------- Tier theming ---------- */
 
-[data-tier='0'] { --tier: var(--t0); }
-[data-tier='1'] { --tier: var(--t1); }
-[data-tier='2'] { --tier: var(--t2); }
-[data-tier='3'] { --tier: var(--t3); }
+[data-tier='0'] { --tier: var(--t0); --tier-fill: var(--t0-fill); }
+[data-tier='1'] { --tier: var(--t1); --tier-fill: var(--t1-fill); }
+[data-tier='2'] { --tier: var(--t2); --tier-fill: var(--t2-fill); }
+[data-tier='3'] { --tier: var(--t3); --tier-fill: var(--t3-fill); }
 
 .glyph {
   width: 24px;
@@ -332,7 +338,7 @@ button {
   place-items: center;
   border-radius: 8px;
   color: var(--tier);
-  background: color-mix(in oklab, var(--tier) 14%, transparent);
+  background: color-mix(in oklab, var(--tier-fill) 16%, transparent);
   flex: none;
 }
 
@@ -346,6 +352,7 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow);
 }
 .planning li {
   display: flex;
@@ -364,11 +371,11 @@ button {
   border: 1.5px solid var(--line);
   display: grid;
   place-items: center;
-  color: var(--bg);
+  color: #fff;
 }
 .planning li[data-done='true'] .planning__mark {
-  background: var(--t1);
-  border-color: var(--t1);
+  background: var(--text);
+  border-color: var(--text);
 }
 
 /* ---------- Brief ---------- */
@@ -379,14 +386,15 @@ button {
   gap: 8px;
 }
 .brief h1 {
-  font-size: clamp(28px, 7vw, 36px);
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  font-weight: 650;
+  font-family: var(--serif);
+  font-size: clamp(34px, 8vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 500;
 }
 .brief p {
   color: var(--text-2);
-  font-size: 16px;
+  font-size: 17px;
 }
 .brief__count {
   font-variant-numeric: tabular-nums;
@@ -397,8 +405,9 @@ button {
 .feed {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 0;
+  gap: 6px;
+  padding: 4px 0 0;
+  font-size: 14px;
 }
 .feed__line {
   display: grid;
@@ -426,7 +435,7 @@ button {
   margin-top: 8px;
 }
 
-/* ---------- Cards ---------- */
+/* ---------- Cards: visual weight follows the tier ---------- */
 
 .stack {
   display: flex;
@@ -439,57 +448,109 @@ button {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
-  border: 1px solid color-mix(in oklab, var(--tier) 38%, var(--line));
+  padding: 20px;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow);
   scroll-margin-top: 16px;
 }
 @media (min-width: 640px) {
   .card {
-    padding: 24px;
+    padding: 24px 28px;
   }
 }
+
+/* Tier 3 dominates: a red rule across the top, a warmer field, more air. */
 .card[data-tier='3'] {
-  border-color: color-mix(in oklab, var(--t3) 70%, var(--line));
-  background: color-mix(in oklab, var(--t3) 5%, var(--surface));
+  gap: 24px;
+  border: 1.5px solid color-mix(in oklab, var(--t3) 55%, var(--line));
+  border-top: 6px solid var(--t3);
+  background: #fffaf6;
+  box-shadow: 0 2px 4px rgba(120, 30, 10, 0.06), 0 16px 40px rgba(120, 30, 10, 0.08);
+}
+@media (min-width: 640px) {
+  .card[data-tier='3'] {
+    padding: 32px 36px;
+  }
+}
+
+/* Tier 2: a plain card with an ochre edge. */
+.card[data-tier='2'] {
+  border-left: 4px solid var(--t2-fill);
+}
+
+/* Tier 1: a slim row, no shadow. */
+.card[data-tier='1'] {
+  gap: 12px;
+  padding: 16px 20px;
+  background: transparent;
+  box-shadow: none;
+  border-style: dashed;
+  border-color: #cfc5b1;
 }
 
 .card__head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+.card__headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
 }
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   color: var(--tier);
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
+}
+.badge .glyph {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
 }
 .card__title {
-  font-size: 20px;
-  line-height: 1.25;
-  letter-spacing: -0.015em;
-  font-weight: 650;
+  font-family: var(--serif);
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-weight: 500;
   text-wrap: balance;
+}
+.card[data-tier='3'] .card__title {
+  font-size: clamp(26px, 6vw, 34px);
+  line-height: 1.12;
+}
+.card[data-tier='1'] .card__title {
+  font-size: 20px;
 }
 .card__title:focus {
   outline: none;
 }
 .card__total {
-  font-size: 28px;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--serif);
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+.card[data-tier='1'] .card__total {
+  font-size: 18px;
+  color: var(--text-2);
 }
 .why {
   color: var(--text-2);
   text-wrap: pretty;
+}
+.card[data-tier='1'] .why {
+  font-size: 14px;
 }
 .why b {
   color: var(--text);
@@ -567,7 +628,7 @@ button {
   text-align: right;
 }
 .on-file {
-  color: #7fd6a0;
+  color: var(--ok);
 }
 
 .note {
@@ -580,11 +641,9 @@ button {
   gap: 4px;
 }
 .note__label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-3);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--text);
 }
 
 /* Reversibility meter */
@@ -612,12 +671,12 @@ button {
 .meter {
   height: 6px;
   border-radius: 3px;
-  background: var(--line-soft);
+  background: var(--surface-2);
   overflow: hidden;
 }
 .meter__fill {
   height: 100%;
-  background: var(--tier);
+  background: var(--tier-fill);
   transform-origin: left;
   transform: scaleX(var(--p, 1));
   transition: transform 1s linear;
@@ -640,8 +699,8 @@ button {
   min-height: 56px;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--tier);
-  background: color-mix(in oklab, var(--tier) 12%, var(--surface));
+  border: 1.5px solid var(--tier-fill);
+  background: color-mix(in oklab, var(--tier-fill) 10%, var(--surface));
   overflow: hidden;
   cursor: pointer;
   user-select: none;
@@ -654,7 +713,7 @@ button {
 .hold__fill {
   position: absolute;
   inset: 0;
-  background: color-mix(in oklab, var(--tier) 62%, transparent);
+  background: var(--tier-fill);
   transform-origin: left;
   transform: scaleX(0);
   transition: transform 180ms ease-out;
@@ -670,7 +729,7 @@ button {
   gap: 8px;
 }
 .hold[data-holding='true'] .hold__label {
-  color: #0a1020;
+  color: var(--text);
 }
 .hint {
   color: var(--text-3);
@@ -680,48 +739,26 @@ button {
 
 /* ---------- Tier 1 batch ---------- */
 
-.pile {
-  position: relative;
-  padding-bottom: 16px;
-}
-.pile__mail {
-  position: relative;
-  z-index: 3;
+.preview {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 16px;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid #2e4170;
-  background: var(--surface-2);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  font-size: 14px;
 }
-.pile__mail p {
+.preview p {
   color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pile__to {
+.preview__to {
   font-weight: 600;
   color: var(--text) !important;
-}
-.pile__count {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  color: var(--text-3);
-  font-size: 12px;
-}
-.pile__back {
-  position: absolute;
-  left: calc(var(--n) * 8px);
-  right: calc(var(--n) * 8px);
-  top: calc(var(--n) * 8px);
-  bottom: calc(16px - var(--n) * 8px);
-  z-index: calc(3 - var(--n));
-  border-radius: var(--radius-sm);
-  border: 1px solid #2a3b66;
-  background: color-mix(in oklab, var(--surface-2) calc(100% - var(--n) * 18%), var(--bg));
 }
 
 .pick {
@@ -737,7 +774,7 @@ button {
   width: 16px;
   height: 16px;
   margin: 4px 0 0;
-  accent-color: var(--t1);
+  accent-color: var(--t1-fill);
 }
 .pick__sub {
   grid-column: 2;
@@ -813,14 +850,15 @@ button {
 }
 
 .paper {
-  margin-top: 8px;
-  padding: 16px;
-  border-radius: 8px;
+  margin-top: 12px;
+  padding: 20px 22px;
+  border-radius: 4px;
   background: var(--paper);
   color: var(--paper-ink);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+  border: 1px solid #e7e1d4;
+  box-shadow: 0 1px 1px rgba(60, 45, 20, 0.06), 0 10px 28px rgba(60, 45, 20, 0.09);
 }
 .paper__name {
   display: flex;
@@ -828,9 +866,10 @@ button {
   gap: 8px;
   margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(43, 42, 39, 0.18);
+  border-bottom: 1px solid rgba(43, 42, 39, 0.14);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
+  color: #7a7367;
 }
 .paper__line {
   opacity: 0.62;
@@ -840,10 +879,10 @@ button {
   font-weight: 650;
 }
 .paper__hidden {
-  margin-top: 8px;
-  padding: 8px;
-  border-radius: 6px;
-  background: #ffd9d3;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: #fde8e3;
   border: 1.5px dashed #c8362a;
   color: #5a0f08;
   font-weight: 550;
@@ -855,12 +894,10 @@ button {
   margin-bottom: 4px;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: #a3281d;
 }
 .paper__hidden mark {
-  background: #ff8f82;
+  background: #f7b4a9;
   color: inherit;
   padding: 0 2px;
   border-radius: 2px;
@@ -902,11 +939,10 @@ button {
   gap: 8px;
 }
 .handled h2 {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
 }
 .done {
   display: flex;
@@ -915,7 +951,7 @@ button {
   padding: 12px 16px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
-  background: color-mix(in oklab, var(--surface) 70%, transparent);
+  background: var(--surface);
   animation: fade-in 200ms ease-out both;
 }
 .done__top {
@@ -935,9 +971,10 @@ button {
 /* ---------- Rules ---------- */
 
 .rules {
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 16px 20px;
+  background: var(--surface);
 }
 .rules > summary {
   cursor: pointer;
@@ -1046,6 +1083,13 @@ button {
   .card[data-tier='3'] {
     /* One still pulse in place of the shake. */
     animation: fade-in 0.01ms both !important;
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--t3) 35%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--t3) 25%, transparent);
+  }
+}
+
+/* On narrow screens the invoice uses the card's full width instead of sitting under its icon. */
+@media (max-width: 639px) {
+  .source__row .paper {
+    margin-left: -32px;
   }
 }

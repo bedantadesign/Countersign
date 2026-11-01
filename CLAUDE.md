@@ -50,10 +50,12 @@ Deployed on Vercel from `claude/clever-meitner-3ffzoi` with live planning on (`A
 
 Live planning runs on `claude-haiku-5-5` (no server-side refusal fallback). First live run: Haiku surfaced the hidden invoice line as document-instructed and the rules held it at Tier 3. It also read the old request ("pending vendor stuff") literally and skipped IRNs and reminders, so the request became "Clear the pending month-end stuff". Notes are capped at two short sentences and render with a dot, not a check. Long planner titles are cut at a word with an ellipsis.
 
+Visual design: warm light editorial (paper background, Newsreader serif for headlines, Inter for text). Visual weight follows the tier: Tier 3 is the dominant card with a red top rule, Tier 2 cards have an ochre edge and show at most three line items before "Show N more", Tier 1 is a slim dashed row, Tier 0 is the quiet log. Colours are tokens in `src/app/globals.css`; `--tier` is for text, `--tier-fill` for bars and filled buttons.
+
 ## Next, in order
 
 1. Confirm a live run on the new prompt shows 4 cards (Tier 3 stop, payments, IRN batch, reminders) and at most two short notes. If Haiku still skips IRNs or reminders, tune `src/lib/planner/prompt.ts`.
-2. Mobile polish pass at 390px width: screenshot each card, fix only what's broken.
+2. Mobile polish pass at 390px width on the new design: screenshot each state (start, planning, cards, handled, all clear), fix only what's broken. The bank comparison table is the tightest spot.
 3. Stale bank cutoff: if the tab stays open past the cutoff, the payment card still names a batch time that has passed, and approving records an undo deadline in the past. Roll to the next batch.
 4. Start screen race: if Start is clicked before the `GET /api/plan` check returns, the page runs the recorded plan even when live is on. Wait for the check.
 5. MCP App wrapper, timeboxed to 3 hours: the official `ext-apps` SDK, 500px inline height, host CSS variables.

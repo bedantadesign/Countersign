@@ -40,18 +40,22 @@ npm run build
 - Next's route announcer also has `role="alert"`; scope alert locators.
 - `pkill -f "next start"` matches and kills your own shell command. Kill the server by PID.
 - Vitest aliases `server-only` to `src/test/server-only.ts`.
-- The cloud environment has no Claude API key, so live planning has only been tested with a mocked client.
+- The cloud environment has no Claude API key and can't reach vercel.app. Live planning is tested by the owner on the deployed site; unit and e2e tests mock the client.
 
 ## Status
 
 Built: the engine, all four tiers, hold-to-confirm, live undo meters, the Tier 3 safe path, live planning with the recorded plan as fallback, and unit and browser tests. Work happens on branch `claude/clever-meitner-3ffzoi`; don't open a pull request unless asked.
 
+Deployed on Vercel from `claude/clever-meitner-3ffzoi` with live planning on (`ANTHROPIC_API_KEY` set for Production and Preview, no `COUNTERSIGN_LIVE`). Every push redeploys. The owner should keep a spend limit on that key.
+
+Live planning runs on `claude-haiku-5-5` (no server-side refusal fallback). First live run: Haiku surfaced the hidden invoice line as document-instructed and the rules held it at Tier 3. It also read the old request ("pending vendor stuff") literally and skipped IRNs and reminders, so the request became "Clear the pending month-end stuff". Notes are capped at two short sentences and render with a dot, not a check. Long planner titles are cut at a word with an ellipsis.
+
 ## Next, in order
 
-1. Mobile polish pass at 390px width: screenshot each card, fix only what's broken.
-2. Stale bank cutoff: if the tab stays open past the cutoff, the payment card still names a batch time that has passed, and approving records an undo deadline in the past. Roll to the next batch.
-3. Run live planning once with a real key (`ANTHROPIC_API_KEY=... npm run dev`) and tune the prompt in `src/lib/planner/prompt.ts`. The planner runs on `claude-haiku-5-5`, which has no server-side refusal fallback; check the injected invoice does not trip a refusal.
-4. Deploy (the owner does this on Vercel). Use `COUNTERSIGN_LIVE=off`, or a key with a spend limit: anyone who opens the page can trigger a billed call.
+1. Confirm a live run on the new prompt shows 4 cards (Tier 3 stop, payments, IRN batch, reminders) and at most two short notes. If Haiku still skips IRNs or reminders, tune `src/lib/planner/prompt.ts`.
+2. Mobile polish pass at 390px width: screenshot each card, fix only what's broken.
+3. Stale bank cutoff: if the tab stays open past the cutoff, the payment card still names a batch time that has passed, and approving records an undo deadline in the past. Roll to the next batch.
+4. Start screen race: if Start is clicked before the `GET /api/plan` check returns, the page runs the recorded plan even when live is on. Wait for the check.
 5. MCP App wrapper, timeboxed to 3 hours: the official `ext-apps` SDK, 500px inline height, host CSS variables.
 6. The owner records the video and writes the case study.
 

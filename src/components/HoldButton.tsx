@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Icon } from './Icon';
 
 interface Props {
@@ -17,7 +17,7 @@ export function HoldButton({ label, onConfirm, durationMs = 1200 }: Props) {
   const [holding, setHolding] = useState(false);
   const [done, setDone] = useState(false);
   const timer = useRef<number | undefined>(undefined);
-  const hintId = useRef(`hold-${Math.random().toString(36).slice(2)}`).current;
+  const hintId = `hold-${useId()}`;
 
   const stop = useCallback(() => {
     window.clearTimeout(timer.current);

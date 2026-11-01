@@ -62,6 +62,4 @@ Visual design: warm light editorial (paper background, Newsreader serif for head
 2. MCP App wrapper, timeboxed to 3 hours: the official `ext-apps` SDK, 500px inline height, host CSS variables.
 3. The owner records the video and writes the case study.
 
-Small: `HoldButton` builds its hint id with `Math.random`; `useId` is cleaner.
-
 Before publishing any claim about the 24-hour IRN cancellation window (`IRN_CANCEL_WINDOW_HOURS`), check it against the current government notification.

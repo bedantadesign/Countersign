@@ -50,6 +50,8 @@ Deployed on Vercel from `claude/clever-meitner-3ffzoi` with live planning on (`A
 
 Live planning runs on `claude-haiku-5-5` (no server-side refusal fallback). First live run: Haiku surfaced the hidden invoice line as document-instructed and the rules held it at Tier 3. It also read the old request ("pending vendor stuff") literally and skipped IRNs and reminders, so the request became "Clear the pending month-end stuff". Notes are capped at two short sentences and render with a dot, not a check. Long planner titles are cut at a word with an ellipsis.
 
+Second live run (new request): IRNs and reminders came back, but Haiku skipped the Sundaram and Kaveri payments because they fall due on 2 and 4 Nov (the planner gets no date), and wrote the reconciliation as "Resolve first/second mismatch". The prompt now says month-end pays invoices due in the coming week, and reconciliation is reported in the past tense, one match line and one mismatch line.
+
 Bank batches recur every half hour (`PAYMENT_BATCH_EVERY_MS`, `everyMs` on the reversibility). If the tab stays open past a cutoff, the payment card names the next batch and an approval's undo deadline rolls forward (`windowClose` in `src/lib/reducer.ts`).
 
 The Run button stays disabled until `GET /api/plan` answers (5s timeout, then recorded), so an early click can't skip live planning.
@@ -58,7 +60,7 @@ Visual design: warm light editorial (paper background, Newsreader serif for head
 
 ## Next, in order
 
-1. Confirm a live run on the new prompt shows 4 cards (Tier 3 stop, payments, IRN batch, reminders) and at most two short notes. If Haiku still skips IRNs or reminders, tune `src/lib/planner/prompt.ts`.
+1. Confirm a live run on the latest prompt shows 4 cards (Tier 3 stop, payments, IRN batch, reminders), past-tense reconciliation lines, and at most two short notes. If payments are still skipped, give the planner today's date in `plannerInput`.
 2. MCP App wrapper, timeboxed to 3 hours: the official `ext-apps` SDK, 500px inline height, host CSS variables.
 3. The owner records the video and writes the case study.
 

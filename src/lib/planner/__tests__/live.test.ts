@@ -58,6 +58,13 @@ describe('requestPlan', () => {
   });
 });
 
+describe('PLANNER_SYSTEM', () => {
+  it('tells the planner month-end pays invoices due soon, and reports reconciliation in the past tense', () => {
+    expect(PLANNER_SYSTEM).toContain('a due date a few days away is not a reason to skip one');
+    expect(PLANNER_SYSTEM).toContain('in the past tense');
+  });
+});
+
 describe('plannerInput', () => {
   const input = plannerInput(TASK, ctx.documents);
 

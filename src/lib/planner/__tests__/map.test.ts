@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toProposedActions } from '../map';
+import { clip, toProposedActions } from '../map';
 import { buildCards, rerouteToAccountOnFile } from '../../cards';
 import { decide } from '../../tiering';
 import { buildScenario, INJECTED_BANK, VENDORS } from '../../fixtures';
@@ -102,5 +102,19 @@ describe('toProposedActions', () => {
     const held = cards.find((c) => c.tier === 3)!;
     expect(rerouteToAccountOnFile(held, ctx, decisions)).toBeNull();
     expect(rerouteToAccountOnFile(held, ctx, held.items)).not.toBeNull();
+  });
+});
+
+describe('clip', () => {
+  it('cuts long planner text at a word and marks the cut', () => {
+    const title = 'Reconciled 41 purchase invoices against GSTR-2B: 39 matched, 2 ITC mismatches flagged for follow-up';
+    const clipped = clip(title, 80)!;
+    expect(clipped.length).toBeLessThanOrEqual(80);
+    expect(clipped).toBe('Reconciled 41 purchase invoices against GSTR-2B: 39 matched, 2 ITC mismatches…');
+  });
+
+  it('leaves short text alone', () => {
+    expect(clip('Matched 3 vendor invoices', 80)).toBe('Matched 3 vendor invoices');
+    expect(clip(null)).toBeUndefined();
   });
 });

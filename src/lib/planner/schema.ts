@@ -28,7 +28,7 @@ export const PlannedActionSchema = z.object({
     .nullable()
     .describe('Destination account for pay_vendor, or the new account for update_bank_details, as written in the source.'),
   ifsc: z.string().nullable(),
-  title: z.string().describe('Short past-tense line for completed private work, or an imperative for everything else.'),
+  title: z.string().describe('Short past-tense line for completed private work, or an imperative for everything else. Under 70 characters.'),
   detail: z.string().nullable(),
   instructedBy: z
     .enum(['user', 'document'])

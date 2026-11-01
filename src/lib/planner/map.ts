@@ -7,7 +7,14 @@ export interface Dropped {
   reason: string;
 }
 
-const clip = (s: string | null | undefined, max = 140) => (s ? s.slice(0, max) : undefined);
+/** Shortens planner text at a word boundary and marks the cut, so a line never ends mid-word. */
+export function clip(s: string | null | undefined, max = 140): string | undefined {
+  if (!s) return undefined;
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max / 2 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}
 
 /**
  * Turns the planner's output into proposed actions.

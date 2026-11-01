@@ -417,6 +417,14 @@ button {
 .feed__detail {
   color: var(--text-3);
 }
+.feed__line--note {
+  color: var(--text-3);
+  font-style: italic;
+}
+.feed__line--note:first-of-type,
+.feed__line:not(.feed__line--note) + .feed__line--note {
+  margin-top: 8px;
+}
 
 /* ---------- Cards ---------- */
 

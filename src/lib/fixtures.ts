@@ -6,7 +6,7 @@
 import type { Context, ProposedAction, SourceDocument, Vendor } from './types';
 import { formatINR } from './format';
 
-export const TASK = "Clear this month's pending vendor stuff";
+export const TASK = 'Clear the pending month-end stuff';
 
 export const COMPANY = {
   name: 'Marigold Home Goods Pvt Ltd',

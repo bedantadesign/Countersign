@@ -6,6 +6,8 @@ interface Line {
   key: string;
   title: string;
   detail?: string;
+  /** Notes and ignored proposals are not done work, so they don't get a check. */
+  note?: boolean;
 }
 
 /** Tier 0: logged as quiet lines, never as cards. Seven reminder drafts collapse into one line. */
@@ -31,17 +33,21 @@ interface Props {
 }
 
 export function Feed({ done, notes = [], dropped = [] }: Props) {
-  const lines = [
+  const lines: Line[] = [
     ...toLines(done),
-    ...notes.map((n, i) => ({ key: `note-${i}`, title: `Claude noted: ${n}`, detail: undefined })),
-    ...dropped.map((d, i) => ({ key: `dropped-${i}`, title: `Ignored a proposal: ${d.title}`, detail: d.reason })),
+    ...notes.map((n, i) => ({ key: `note-${i}`, title: `Claude noted: ${n}`, note: true })),
+    ...dropped.map((d, i) => ({ key: `dropped-${i}`, title: `Ignored a proposal: ${d.title}`, detail: d.reason, note: true })),
   ];
   return (
     <ul className="feed" aria-label="Done and logged">
       {lines.map((l, i) => (
-        <li className="feed__line" key={l.key} style={{ '--i': i } as React.CSSProperties}>
+        <li
+          className={l.note ? 'feed__line feed__line--note' : 'feed__line'}
+          key={l.key}
+          style={{ '--i': i } as React.CSSProperties}
+        >
           <span className="glyph" data-tier={0}>
-            <Icon name="check" size={14} />
+            <Icon name={l.note ? 'dot' : 'check'} size={14} />
           </span>
           <span>
             {l.title}

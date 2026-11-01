@@ -42,7 +42,7 @@ export const PlannedActionSchema = z.object({
 
 export const PlanSchema = z.object({
   actions: z.array(PlannedActionSchema),
-  notes: z.array(z.string()).describe('Up to three short observations the person should know about.'),
+  notes: z.array(z.string()).describe('At most two notes, one short sentence each, for what the person must check that the actions do not show.'),
 });
 
 export type Plan = z.infer<typeof PlanSchema>;

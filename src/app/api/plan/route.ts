@@ -25,7 +25,7 @@ export async function POST() {
     const client = new Anthropic({ timeout: 60_000, maxRetries: 1 });
     const { plan, model } = await requestPlan(client, ctx.request, ctx.documents);
     const { actions, dropped } = toProposedActions(plan, ctx.documents);
-    return NextResponse.json({ actions, dropped, notes: plan.notes.slice(0, 3), model });
+    return NextResponse.json({ actions, dropped, notes: plan.notes.slice(0, 2), model });
   } catch (error) {
     const { status, body } = planFailure(error);
     if (status >= 500 && body.reason === 'unknown') console.error('Planning failed', error);

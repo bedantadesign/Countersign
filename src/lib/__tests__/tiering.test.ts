@@ -13,7 +13,7 @@ import type { ProposedAction } from '../types';
 const NOW = Date.parse('2026-10-30T12:00:00Z');
 const { ctx, plan } = buildScenario(NOW);
 const byId = (id: string) => plan.find((a) => a.id === id)!;
-const user = { origin: 'user' as const, quote: "Clear this month's pending vendor stuff" };
+const user = { origin: 'user' as const, quote: 'Clear the pending month-end stuff' };
 
 function pay(overrides: Partial<ProposedAction> = {}): ProposedAction {
   const v = VENDORS['v-sundaram']!;

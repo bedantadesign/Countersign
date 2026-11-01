@@ -50,15 +50,16 @@ Deployed on Vercel from `claude/clever-meitner-3ffzoi` with live planning on (`A
 
 Live planning runs on `claude-haiku-5-5` (no server-side refusal fallback). First live run: Haiku surfaced the hidden invoice line as document-instructed and the rules held it at Tier 3. It also read the old request ("pending vendor stuff") literally and skipped IRNs and reminders, so the request became "Clear the pending month-end stuff". Notes are capped at two short sentences and render with a dot, not a check. Long planner titles are cut at a word with an ellipsis.
 
+Bank batches recur every half hour (`PAYMENT_BATCH_EVERY_MS`, `everyMs` on the reversibility). If the tab stays open past a cutoff, the payment card names the next batch and an approval's undo deadline rolls forward (`windowClose` in `src/lib/reducer.ts`).
+
 Visual design: warm light editorial (paper background, Newsreader serif for headlines, Inter for text). Visual weight follows the tier: Tier 3 is the dominant card with a red top rule, Tier 2 cards have an ochre edge and show at most three line items before "Show N more", Tier 1 is a slim dashed row, Tier 0 is the quiet log. Checked at 390px: on phones the bank comparison stacks each row's label above the values so account numbers never break, and handled rows put the undo button under the title. Colours are tokens in `src/app/globals.css`; `--tier` is for text, `--tier-fill` for bars and filled buttons.
 
 ## Next, in order
 
 1. Confirm a live run on the new prompt shows 4 cards (Tier 3 stop, payments, IRN batch, reminders) and at most two short notes. If Haiku still skips IRNs or reminders, tune `src/lib/planner/prompt.ts`.
-2. Stale bank cutoff: if the tab stays open past the cutoff, the payment card still names a batch time that has passed, and approving records an undo deadline in the past. Roll to the next batch.
-3. Start screen race: if Start is clicked before the `GET /api/plan` check returns, the page runs the recorded plan even when live is on. Wait for the check.
-4. MCP App wrapper, timeboxed to 3 hours: the official `ext-apps` SDK, 500px inline height, host CSS variables.
-5. The owner records the video and writes the case study.
+2. Start screen race: if Start is clicked before the `GET /api/plan` check returns, the page runs the recorded plan even when live is on. Wait for the check.
+3. MCP App wrapper, timeboxed to 3 hours: the official `ext-apps` SDK, 500px inline height, host CSS variables.
+4. The owner records the video and writes the case study.
 
 Small: `HoldButton` builds its hint id with `Math.random`; `useId` is cleaner.
 

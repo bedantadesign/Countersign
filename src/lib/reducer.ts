@@ -1,4 +1,4 @@
-import type { Card, Decision } from './types';
+import type { Card, Decision, Reversibility } from './types';
 import { buildCards } from './cards';
 
 export type Resolution =
@@ -36,12 +36,21 @@ export type Event =
   | { type: 'reject'; cardId: string; at: number }
   | { type: 'reset' };
 
-/** A window that starts when you approve (IRN) or closes at a fixed time (bank batch). */
-export function undoDeadline(card: Card, at: number): number | undefined {
-  const rev = card.items[0]?.reversibility;
+/**
+ * When the window closes for an action taken at `at`: a fixed time (bank batch), rolled to the
+ * next one if that time has passed, or a span that starts when you approve (IRN).
+ */
+export function windowClose(rev: Reversibility | undefined, at: number): number | undefined {
   if (!rev || rev.kind !== 'windowed') return undefined;
-  if (rev.expiresAt !== undefined) return rev.expiresAt;
+  if (rev.expiresAt !== undefined) {
+    if (at < rev.expiresAt || !rev.everyMs) return rev.expiresAt;
+    return rev.expiresAt + (Math.floor((at - rev.expiresAt) / rev.everyMs) + 1) * rev.everyMs;
+  }
   return rev.windowMs !== undefined ? at + rev.windowMs : undefined;
+}
+
+export function undoDeadline(card: Card, at: number): number | undefined {
+  return windowClose(card.items[0]?.reversibility, at);
 }
 
 export function reducer(state: State, event: Event): State {

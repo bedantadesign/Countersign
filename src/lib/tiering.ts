@@ -13,6 +13,7 @@ import type {
 } from './types';
 import { documentText, hiddenText, normalise } from './documents';
 import { formatDate, formatINR, maskAccount } from './format';
+import { PAYMENT_BATCH_EVERY_MS } from './fixtures';
 
 const HOUR = 60 * 60 * 1000;
 
@@ -52,6 +53,7 @@ export const PROFILES: Record<ActionKind, Profile> = {
       kind: 'windowed',
       label: 'Until the bank batch is released',
       expiresAt: ctx.paymentCutoffAt,
+      everyMs: PAYMENT_BATCH_EVERY_MS,
     }),
   },
   update_bank_details: { blast: 'consequential', reversibility: () => ({ kind: 'full' }) },

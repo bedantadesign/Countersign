@@ -85,7 +85,14 @@ export interface ProposedAction {
 
 export type Reversibility =
   | { kind: 'full' }
-  | { kind: 'windowed'; label: string; windowMs?: number; expiresAt?: number }
+  | {
+      kind: 'windowed';
+      label: string;
+      windowMs?: number;
+      expiresAt?: number;
+      /** expiresAt recurs at this interval, like a bank batch. An action after it rolls to the next one. */
+      everyMs?: number;
+    }
   | { kind: 'permanent' };
 
 export interface Context {

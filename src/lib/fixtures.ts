@@ -191,10 +191,11 @@ export function vendorCounterparty(v: Vendor) {
   return { id: v.id, name: v.name, gstin: v.gstin };
 }
 
-const HALF_HOUR = 30 * 60 * 1000;
+/** Bank payment batches go out every half hour, on the hour and the half hour. */
+export const PAYMENT_BATCH_EVERY_MS = 30 * 60 * 1000;
 /** Next :00 or :30 that is at least 45 minutes away, so the countdown is always visibly running. */
 export function nextPaymentCutoff(now: number): number {
-  return Math.ceil((now + 45 * 60 * 1000) / HALF_HOUR) * HALF_HOUR;
+  return Math.ceil((now + 45 * 60 * 1000) / PAYMENT_BATCH_EVERY_MS) * PAYMENT_BATCH_EVERY_MS;
 }
 
 export interface Scenario {

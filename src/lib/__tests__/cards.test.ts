@@ -64,6 +64,17 @@ describe('reducer', () => {
     expect(r.kind === 'approved' && r.undoUntil).toBe(ctx.paymentCutoffAt);
   });
 
+  it('rolls a payment approved after the cutoff to the next batch, never a deadline in the past', () => {
+    const half = 30 * 60 * 1000;
+    const approveAt = (at: number) => {
+      const r = reducer(ready(), { type: 'approve', cardId: '2:pay_vendor', at }).resolutions['2:pay_vendor']!;
+      return r.kind === 'approved' ? r.undoUntil : undefined;
+    };
+    expect(approveAt(ctx.paymentCutoffAt)).toBe(ctx.paymentCutoffAt + half);
+    expect(approveAt(ctx.paymentCutoffAt + 1)).toBe(ctx.paymentCutoffAt + half);
+    expect(approveAt(ctx.paymentCutoffAt + half + 5 * 60 * 1000)).toBe(ctx.paymentCutoffAt + 2 * half);
+  });
+
   it('lets Tier 1 approve a subset and refuses an empty one', () => {
     const ids = cards.find((c) => c.kind === 'send_reminder')!.items.map((d) => d.action.id);
     const none = reducer(ready(), { type: 'approve', cardId: '1:send_reminder', at: NOW, approvedIds: [] });

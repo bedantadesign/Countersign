@@ -10,6 +10,7 @@ import { HoldButton } from './HoldButton';
 import { Icon } from './Icon';
 import { ReversibilityMeter } from './ReversibilityMeter';
 import { WhyDetails } from './WhyDetails';
+import { windowClose } from '@/lib/reducer';
 
 interface Props {
   card: Card;
@@ -24,7 +25,11 @@ export function CountersignCard({ card, index, ctx, now, onConfirm }: Props) {
   const isIrn = card.kind === 'generate_irn';
   const n = card.items.length;
   const first = card.items[0]!;
-  const cutoff = first.reversibility.kind === 'windowed' ? first.reversibility.expiresAt : undefined;
+  const rev = first.reversibility;
+  // The batch that is actually next: if the tab stayed open past a cutoff, this rolls forward.
+  const cutoff = rev.kind === 'windowed' && rev.expiresAt !== undefined ? windowClose(rev, now) : undefined;
+  const batchOpenedAt =
+    cutoff !== undefined && rev.kind === 'windowed' && rev.everyMs ? Math.max(ctx.now, cutoff - rev.everyMs) : ctx.now;
 
   const title = isIrn ? `Generate ${plural(n, 'e-invoice IRN')}` : `Pay ${plural(n, 'vendor')}`;
   const holdLabel = isIrn ? `Hold to generate ${n} IRNs` : `Hold to pay ${formatINR(cardTotalPaise(card))}`;
@@ -84,7 +89,7 @@ export function CountersignCard({ card, index, ctx, now, onConfirm }: Props) {
       <ReversibilityMeter
         reversibility={first.reversibility}
         now={now}
-        startedAt={isIrn ? undefined : ctx.now}
+        startedAt={isIrn ? undefined : batchOpenedAt}
         until={isIrn ? undefined : cutoff}
       />
 

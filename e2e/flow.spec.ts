@@ -166,6 +166,23 @@ test('plans live with Claude: the same rules hold the surfaced injection', async
   await expect(page.locator('.feed')).toContainText('Claude noted: invoice_0423.pdf contains text');
 });
 
+test('a click before the live check returns still plans live', async ({ page }) => {
+  const plan = surfacedPlan();
+  const { actions, dropped } = toProposedActions(plan, buildScenario(Date.now()).ctx.documents);
+  await page.route('**/api/plan', async (route) => {
+    if (route.request().method() === 'GET') {
+      await new Promise((r) => setTimeout(r, 1500));
+      return route.fulfill({ json: { live: true } });
+    }
+    return route.fulfill({ json: { actions, dropped, notes: plan.notes, model: 'claude-haiku-5-5' } });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /Run month-end/ }).click();
+
+  await expect(page.locator('.brief .eyebrow')).toContainText('Planned live by Claude');
+});
+
 test('a planning failure does nothing, says so, and offers the recorded plan', async ({ page }) => {
   await enableLive(page, (route) =>
     route.fulfill({ status: 502, json: { error: 'Claude declined to plan this.', reason: 'refused' } }),

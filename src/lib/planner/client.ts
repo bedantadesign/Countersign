@@ -8,10 +8,10 @@ export interface LivePlan {
   model: string;
 }
 
-/** False when the server has no credentials, or there is no server at all (a static host). */
+/** False when the server has no credentials, there is no server at all (a static host), or it doesn't answer in 5s. */
 export async function fetchLiveAvailable(): Promise<boolean> {
   try {
-    const res = await fetch('/api/plan', { cache: 'no-store' });
+    const res = await fetch('/api/plan', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
     if (!res.ok) return false;
     const body = (await res.json()) as { live?: unknown };
     return body.live === true;

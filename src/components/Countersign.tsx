@@ -61,7 +61,8 @@ export function Countersign() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [step, setStep] = useState(0);
-  const [liveAvailable, setLiveAvailable] = useState(false);
+  // null until the server says whether live planning is on; Run waits for the answer.
+  const [liveAvailable, setLiveAvailable] = useState<boolean | null>(null);
   const [mode, setMode] = useState<Mode>('recorded');
   const [meta, setMeta] = useState<PlanMeta>({ source: 'recorded', notes: [], dropped: [] });
   const timers = useRef<number[]>([]);
@@ -217,10 +218,17 @@ export function Countersign() {
                 </label>
               </fieldset>
             ) : null}
-            <button type="button" className="btn btn--primary" onClick={() => run(liveAvailable ? mode : 'recorded')}>
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={liveAvailable === null}
+              onClick={() => run(liveAvailable ? mode : 'recorded')}
+            >
               Run month-end <Icon name="arrow" size={16} />
             </button>
-            {!liveAvailable ? <p className="ask__who">Recorded plan. Live planning is off on this server.</p> : null}
+            {liveAvailable === false ? (
+              <p className="ask__who">Recorded plan. Live planning is off on this server.</p>
+            ) : null}
           </section>
 
           <ul className="tiers-legend" aria-label="The four tiers">
